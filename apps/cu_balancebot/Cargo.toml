@@ -1,0 +1,147 @@
+[workspace]
+
+[package]
+name = "cu-rp-balancebot"
+description = "This is a full robot example for the Copper project. It runs on the Raspberry Pi with the balance bot hat to balance a rod."
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+default-run = "balancebot-sim"
+
+[package.metadata.cargo-shear]
+ignored = ["serde"]
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+bevy_ecs = { version = "0.18.0", default-features = false }
+cu-ads7883-new = { git = "https://github.com/copper-project/copper-rs.git", branch = "master" }
+cu-rp-sn754410-new = { git = "https://github.com/copper-project/copper-rs.git", branch = "master" }
+cu-rp-encoder = { git = "https://github.com/copper-project/copper-rs.git", branch = "master" }
+cu-pid = { git = "https://github.com/copper-project/copper-rs.git", branch = "master" }
+
+# Log reader depencies
+cu29-export = { git = "https://github.com/copper-project/copper-rs.git", branch = "master", optional = true, features = [
+  "python",
+  "mcap",
+] }
+
+avian3d = { version = "0.6.1", default-features = false, features = [
+  "bevy_scene",
+  "collider-from-mesh",
+  "debug-plugin",
+  "parallel",
+  "f32",
+  "3d",
+  "parry-f32",
+  "xpbd_joints",
+], optional = true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+cu29 = { git = "https://github.com/copper-project/copper-rs.git", branch = "master" }
+cu-consolemon = { git = "https://github.com/copper-project/copper-rs.git", branch = "master" }
+cu-bevymon = { git = "https://github.com/copper-project/copper-rs.git", branch = "master", optional = true }
+image = { version = "0.25", default-features = false, features = [
+  "png",
+], optional = true }
+bevy = { version = "0.18.0", default-features = false, features = [
+  "x11",
+  "default_font",
+  "bevy_render",
+  "bevy_window",
+  "bevy_core_pipeline",
+  "bevy_pbr",
+  "bevy_scene",
+  "bevy_sprite",
+  "bevy_gltf",
+  "gltf_animation",
+  "bevy_picking",
+  "mesh_picking",
+  "tonemapping_luts",
+  "bevy_ui",
+  "bevy_ui_render",
+  "ktx2",
+  "jpeg",
+  "png",
+  "zstd_rust",
+  "trace",
+  "reflect_auto_register",
+], optional = true }
+cached-path = { version = "0.10.0", features = [
+  "progress-bar",
+  "rustls-tls",
+], optional = true }
+winit = { version = "=0.30.13", default-features = false, optional = true }
+bevy_anti_alias = { version = "0.18.0", optional = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+cu29 = { git = "https://github.com/copper-project/copper-rs.git", branch = "master", default-features = false, features = [
+  "std",
+  "textlogs",
+  "units",
+] }
+cu-bevymon = { git = "https://github.com/copper-project/copper-rs.git", branch = "master", default-features = false, optional = true }
+bevy_anti_alias = { version = "0.18.0", optional = true }
+bevy = { version = "0.18.0", default-features = false, features = [
+  "default_font",
+  "bevy_render",
+  "bevy_window",
+  "bevy_core_pipeline",
+  "bevy_pbr",
+  "bevy_scene",
+  "bevy_sprite",
+  "bevy_gltf",
+  "gltf_animation",
+  "bevy_picking",
+  "mesh_picking",
+  "tonemapping_luts",
+  "bevy_ui",
+  "bevy_ui_render",
+  "ktx2",
+  "jpeg",
+  "png",
+  "zstd_rust",
+  "reflect_auto_register",
+], optional = true }
+
+[features]
+default = ["sim"]
+# generates an executable to read the logs
+logreader = ["dep:cu29-export"]
+sim_core = ["cu29/sysclock-perf"]
+# dependencies to run the Bevy-based balancebot sim
+sim = [
+  "sim_core",
+  "dep:bevy",
+  "dep:bevy_anti_alias",
+  "dep:avian3d",
+  "dep:cached-path",
+  "dep:image",
+  "dep:winit",
+]
+sim-debug = ["logreader", "cu29/reflect", "cu29/remote-debug"]
+bevymon = ["sim", "dep:cu-bevymon"]
+
+[[bin]]
+name = "balancebot"
+path = "src/main.rs"
+
+[[bin]]
+name = "balancebot-logreader"
+path = "src/logreader.rs"
+required-features = ["logreader"]
+
+[[bin]]
+name = "balancebot-bevymon"
+path = "src/bevymon.rs"
+required-features = ["bevymon"]
+
+[[bin]]
+name = "balancebot-sim"
+path = "src/sim.rs"
+required-features = ["sim"]
+
+[[bin]]
+name = "balancebot-resim"
+path = "src/resim.rs"
+required-features = ["sim-debug"]

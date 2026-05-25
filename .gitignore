@@ -1,0 +1,4 @@
+/target
+*.copper
+Cargo.lock
+/.direnv

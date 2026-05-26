@@ -1,0 +1,16 @@
+[package]
+name = "robot_arm"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+default-run = "robot_arm"
+
+[[bin]]
+name = "robot_arm"
+path = "src/main.rs"
+
+[dependencies]
+cu29 = "0.15.0"
+bincode = { package = "cu-bincode", version = "2.0", default-features = false, features = ["derive", "alloc"] }
+serde = { version = "1.0", features = ["derive"] }

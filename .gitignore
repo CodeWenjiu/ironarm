@@ -1,4 +1,5 @@
 /target
-*.copper
-Cargo.lock
+/logs/
 /.direnv
+/.playwright-mcp
+/.deepseek/state

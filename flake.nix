@@ -38,25 +38,30 @@
           rust-toolchain
         ];
 
-        # Build-time dependencies needed by Rust crate build scripts
-        # (e.g. C compiler for crates like zstd, ring, etc.).
-        guiPackage = with pkgs; [
+        buildDeps = with pkgs; [
           pkg-config
           openssl
-          xorg.libX11
-          xorg.libXcursor
-          xorg.libXi
-          xorg.libXrandr
+        ];
+
+        guiRuntime = with pkgs; [
+          wayland
           libxkbcommon
+          libGL
           vulkan-loader
+          libX11
+          libXcursor
+          libXrandr
+          libXi
+          libxcb
         ];
       in
       {
         devShells.default = pkgs.mkShell {
-          buildInputs = guiPackage ++ devPackages;
+          buildInputs = buildDeps ++ guiRuntime ++ devPackages;
 
           shellHook = ''
             mkdir -p .direnv/bin
+            export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath guiRuntime}
           ''
           + pkgs.lib.concatMapStringsSep "\n" (pkg: ''
             if [ -d "${pkg}/bin" ]; then

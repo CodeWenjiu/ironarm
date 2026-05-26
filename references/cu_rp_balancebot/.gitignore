@@ -4,3 +4,4 @@ assets/skybox.ktx2
 assets/diffuse_map.ktx2
 !assets/.gitkeep
 target/
+logs/

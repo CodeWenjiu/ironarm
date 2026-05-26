@@ -33,4 +33,5 @@
         (src: "joint_0", dst: "state_sink", msg: "crate::messages::JointState"),
         (src: "joint_1", dst: "state_sink", msg: "crate::messages::JointState"),
     ],
+    monitor: (type: "tasks::monitor::AppMonitor"),
 )

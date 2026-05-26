@@ -2,6 +2,10 @@ mod joint_driver;
 
 pub use joint_driver::JointDriver;
 
+pub mod monitor {
+    pub type AppMonitor = cu_consolemon::CuConsoleMon;
+}
+
 use crate::messages::{JointCommand, JointState};
 use cu29::prelude::*;
 
@@ -24,11 +28,7 @@ impl CuSrcTask for CmdSource {
         Ok(Self { tick: 0 })
     }
 
-    fn process(
-        &mut self,
-        _ctx: &CuContext,
-        output: &mut Self::Output<'_>,
-    ) -> CuResult<()> {
+    fn process(&mut self, _ctx: &CuContext, output: &mut Self::Output<'_>) -> CuResult<()> {
         self.tick += 1;
         let angle = if (self.tick / 50) % 2 == 0 { 0.5 } else { -0.5 };
         output.set_payload(JointCommand {
@@ -58,11 +58,7 @@ impl CuSinkTask for StateSink {
         Ok(Self)
     }
 
-    fn process(
-        &mut self,
-        _ctx: &CuContext,
-        input: &Self::Input<'_>,
-    ) -> CuResult<()> {
+    fn process(&mut self, _ctx: &CuContext, input: &Self::Input<'_>) -> CuResult<()> {
         let (j0, j1) = *input;
         if let Some(state) = j0.payload() {
             debug!("StateSink[0]: angle={:.3} rad", state.current_angle);

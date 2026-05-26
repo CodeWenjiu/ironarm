@@ -1,14 +1,21 @@
-# 机械臂项目自动化
+__default:
+    @just --list
 
 build:
-    cargo build -p robot_arm
+    cargo build
+
+clean:
+    cargo clean
+
+dev:
+    cargo run
 
 run:
-    cargo run -p robot_arm
+    cargo run --release
 
 check:
-    cargo check -p robot_arm
+    cargo check
 
 dag:
     @command -v cu29-rendercfg >/dev/null 2>&1 || cargo install --locked cu29-runtime --version "0.15.0" --bin cu29-rendercfg
-    cu29-rendercfg robot_arm/copperconfig.ron --open
+    cu29-rendercfg ironarm_cli/copperconfig.ron --open

@@ -36,6 +36,7 @@
         # (so Zed / other tools that don't inherit the full Nix PATH can find them).
         devPackages = [
           rust-toolchain
+          pkgs.stdenv.cc # provides cc/gcc linker for rust-analyzer
         ];
 
         buildDeps = with pkgs; [
@@ -54,14 +55,17 @@
           libXi
           libxcb
         ];
+
+        allPackages = buildDeps ++ guiRuntime ++ devPackages;
       in
       {
         devShells.default = pkgs.mkShell {
-          buildInputs = buildDeps ++ guiRuntime ++ devPackages;
+          buildInputs = allPackages;
 
           shellHook = ''
             mkdir -p .direnv/bin
             export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath guiRuntime}
+            export OPENSSL_NO_VENDOR=1
           ''
           + pkgs.lib.concatMapStringsSep "\n" (pkg: ''
             if [ -d "${pkg}/bin" ]; then
@@ -69,7 +73,7 @@
                 ln -sf "$f" .direnv/bin/
               done
             fi
-          '') devPackages;
+          '') allPackages;
         };
       }
     );

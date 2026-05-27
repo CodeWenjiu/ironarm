@@ -17,7 +17,7 @@
 
 ## 三、代码规范
 
-1. **命名**：crate 命名 `ironarm_cli`，不含 `cu_` 前缀。binary 命名 `ironarm_cli`（主程序）、`ironarm_cli-logreader`、`ironarm_cli-resim`。
+1. **命名**：crate 命名 以 `ironarm_` 前缀。比如命名 `ironarm_cli`（主程序）。
 2. **目录**：源码在 `ironarm_cli/src/`，task 模块在 `src/tasks/`，消息类型在 `src/messages.rs`。新 package 在根目录下一级目录（如 `ironarm_cli/`）。
 3. **精简优先**：新功能从最小可用形态起步，跑通后再加。不在第一版塞 resim、bevymon、日志导出等非核心模块。
 4. **复用不复制**：如果某个 task 的逻辑可以同时用于多个关节，用 `ComponentConfig` 参数化，不复制多份代码。

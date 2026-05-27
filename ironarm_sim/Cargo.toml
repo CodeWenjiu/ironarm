@@ -1,11 +1,14 @@
 [package]
-name = "ironarm_cli"
+name = "ironarm_sim"
 version = "0.1.0"
 edition = "2024"
+default-run = "ironarm_sim"
 
 [[bin]]
-name = "ironarm_cli"
+name = "ironarm_sim"
 path = "src/main.rs"
 
 [dependencies]
 ironarm_core = { path = "../ironarm_core" }
+cu29 = { workspace = true }
+bevy = { workspace = true }

@@ -17,7 +17,7 @@
 
 ## 三、代码规范
 
-1. **命名**：crate 命名 `ironarm_cli`，不含 `cu_` 前缀。binary 命名 `ironarm_cli`（主程序）、`ironarm_cli-logreader`、`ironarm_cli-resim`。
+1. **命名**：crate 命名 以 `ironarm_` 前缀。比如命名 `ironarm_cli`（主程序）。
 2. **目录**：源码在 `ironarm_cli/src/`，task 模块在 `src/tasks/`，消息类型在 `src/messages.rs`。新 package 在根目录下一级目录（如 `ironarm_cli/`）。
 3. **精简优先**：新功能从最小可用形态起步，跑通后再加。不在第一版塞 resim、bevymon、日志导出等非核心模块。
 4. **复用不复制**：如果某个 task 的逻辑可以同时用于多个关节，用 `ComponentConfig` 参数化，不复制多份代码。
@@ -36,3 +36,11 @@
 
 - `cu29` 及 `cu-*` 系列统一从 crates.io 拉取最新 stable release，不使用 git 依赖
 - 外部 crate 版本号与 `copper-project/extra-examples` master 分支保持一致
+
+## 六、Agent 行为规范（给自己的约束）
+
+1. **先查文档再动手。** 不熟悉的工具/语法（如 justfile `[group]`、bevy API）必须先 query-docs 或读 reference 确认，禁止凭「印象」或「推测」写代码。
+2. **write_file 不可靠，用 `cat << 'EOF'` 替代。** `write_file` 工具写入的文件可能出现编码问题（如 BOM、不可见字符）导致解析失败。写配置文件（justfile、Cargo.toml、RON 等）一律用终端 heredoc。
+3. **最小化验证，不一次改全文件。** 先写最小可运行 case（单 recipe、单 struct、单 module），验证通过后再扩展到完整版本。不要反复猜错、改全文件、再看报错。
+4. **认真读完约束再执行。** 文档说了「[group] 只作用于下一个 recipe」「中间不能有注释」，就必须严格遵守，不是「好像可以」「试试看」。
+5. **验证即交付。** 写完配置必须 `just --list` / `cargo check` 跑通再汇报结果，不允许「应该可以了」就交差。

@@ -12,3 +12,4 @@ path = "src/main.rs"
 ironarm_core = { path = "../ironarm_core" }
 cu29 = { workspace = true }
 bevy = { workspace = true }
+avian3d = { workspace = true }

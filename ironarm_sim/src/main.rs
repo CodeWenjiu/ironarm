@@ -3,9 +3,10 @@ mod tasks;
 
 use bevy::app::{App, AppExit};
 use bevy::prelude::{
-    DefaultPlugins, MessageReader, MessageWriter, PostUpdate,
-    ResMut, Resource, Update,
+    DefaultPlugins, Fixed, FixedUpdate, MessageReader, MessageWriter, PostUpdate, Res, ResMut,
+    Resource,
 };
+use bevy::time::Time;
 use cu29::prelude::*;
 use cu29::simulation::{CuTaskCallbackState, SimOverride};
 use ironarm_core::messages::JointCommand;
@@ -28,11 +29,13 @@ fn set_msg_timing<T: CuMsgPayload>(clock: &RobotClock, msg: &mut CuMsg<T>) {
 struct CopperApp {
     app: IronArmSim,
     clock: RobotClock,
+    clock_mock: RobotClockMock,
+    last_tick: Option<u64>,
 }
 
 fn main() {
     let logger_path = std::env::temp_dir().join("ironarm_sim.copper");
-    let clock = RobotClock::default();
+    let (clock, clock_mock) = RobotClock::mock();
 
     let mut copper = IronArmSim::builder()
         .with_clock(clock.clone())
@@ -48,16 +51,29 @@ fn main() {
 
     let mut app = App::new();
     app.add_plugins(DefaultPlugins);
-    app.insert_resource(CopperApp { app: copper, clock });
-    app.add_systems(Update, run_tick);
+    app.insert_resource(CopperApp {
+        app: copper,
+        clock,
+        clock_mock,
+        last_tick: None,
+    });
+    app.add_systems(FixedUpdate, run_tick);
     app.add_systems(PostUpdate, stop_copper_on_exit);
     app.run();
 }
 
 fn run_tick(
+    time: Res<Time<Fixed>>,
     mut copper: ResMut<CopperApp>,
     mut exit_writer: MessageWriter<AppExit>,
 ) {
+    let current_time = time.elapsed().as_nanos() as u64;
+    if copper.last_tick == Some(current_time) {
+        return;
+    }
+    copper.last_tick = Some(current_time);
+    copper.clock_mock.set_value(current_time);
+
     let clock = copper.clock.clone();
     let mut cb = move |step: crate::default::SimStep| -> SimOverride {
         match step {
@@ -91,10 +107,7 @@ fn run_tick(
     }
 }
 
-fn stop_copper_on_exit(
-    mut exit_events: MessageReader<AppExit>,
-    mut copper: ResMut<CopperApp>,
-) {
+fn stop_copper_on_exit(mut exit_events: MessageReader<AppExit>, mut copper: ResMut<CopperApp>) {
     if exit_events.read().next().is_some() {
         copper
             .app

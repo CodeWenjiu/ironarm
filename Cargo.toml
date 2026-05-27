@@ -3,7 +3,7 @@ members = ["ironarm_cli", "ironarm_core", "ironarm_sim"]
 resolver = "2"
 
 [workspace.dependencies]
-cu29 = { git = "https://github.com/copper-project/copper-rs.git", branch = "master" }
+cu29 = { git = "https://github.com/copper-project/copper-rs.git", branch = "master", features = ["sysclock-perf"] }
 cu-consolemon = { git = "https://github.com/copper-project/copper-rs.git", branch = "master" }
 bincode = { package = "cu-bincode", version = "2.0", default-features = false, features = ["derive", "alloc"] }
 serde = { version = "1.0", features = ["derive"] }
@@ -28,3 +28,4 @@ bevy = { version = "0.18.0", default-features = false, features = [
   "trace",
   "reflect_auto_register",
 ] }
+avian3d = { version = "0.6.1", default-features = false, features = ["f32", "3d", "parallel", "xpbd_joints", "parry-f32"] }

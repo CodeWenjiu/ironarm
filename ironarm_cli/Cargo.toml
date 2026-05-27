@@ -11,7 +11,7 @@ name = "ironarm_cli"
 path = "src/main.rs"
 
 [dependencies]
-cu29 = "0.15.0"
-cu-consolemon = "0.15.0"
+cu29 = { git = "https://github.com/copper-project/copper-rs.git", branch = "master" }
+cu-consolemon = { git = "https://github.com/copper-project/copper-rs.git", branch = "master" }
 bincode = { package = "cu-bincode", version = "2.0", default-features = false, features = ["derive", "alloc"] }
 serde = { version = "1.0", features = ["derive"] }

@@ -3,8 +3,6 @@ mod tasks;
 
 use cu29::prelude::*;
 use std::path::Path;
-use std::thread::sleep;
-use std::time::Duration;
 
 const PREALLOCATED_STORAGE_SIZE: Option<usize> = Some(1024 * 1024 * 100);
 const APP_NAME: &str = env!("CARGO_PKG_NAME");
@@ -36,11 +34,7 @@ fn main() {
 
     debug!("Running... starting clock: {}.", application.clock().now());
     if let Err(e) = application.run() {
-        if e.message() != "Exiting..." {
-            panic!("Failed to run application: {e}");
-        }
+        debug!("Application stopped: {}.", e);
     }
     debug!("End of program: {}.", application.clock().now());
-
-    sleep(Duration::from_secs(1));
 }

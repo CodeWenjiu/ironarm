@@ -24,12 +24,19 @@ pub struct JointState {
 
 impl Default for JointCommand {
     fn default() -> Self {
-        Self { target_angle: 0.0, target_velocity: 0.0, stiffness: 1.0 }
+        Self {
+            target_angle: 0.0,
+            target_velocity: 0.0,
+            stiffness: 1.0,
+        }
     }
 }
 
 impl Default for JointState {
     fn default() -> Self {
-        Self { current_angle: 0.0, current_velocity: 0.0 }
+        Self {
+            current_angle: 0.0,
+            current_velocity: 0.0,
+        }
     }
 }

@@ -466,13 +466,11 @@ dependencies = [
 
 [[package]]
 name = "cu-consolemon"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a20611102d915383ec1cc3f5ba06ddef9c49ebb1dcab20debb6b3a71fb55589f"
+version = "1.0.0-rc2"
+source = "git+https://github.com/copper-project/copper-rs.git?branch=master#895b9d9481cf1c243d8e0e50cf50e723cbce2580"
 dependencies = [
  "ansi-to-tui",
  "arboard",
- "color-eyre",
  "compact_str",
  "cu-tuimon",
  "cu29",
@@ -484,11 +482,11 @@ dependencies = [
 
 [[package]]
 name = "cu-tuimon"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7bcd441052b1a89cfd40f3e786fb4ea227c10b1435ac047c1e86e9ac9bd43ecc"
+version = "1.0.0-rc2"
+source = "git+https://github.com/copper-project/copper-rs.git?branch=master#895b9d9481cf1c243d8e0e50cf50e723cbce2580"
 dependencies = [
  "ansi-to-tui",
+ "cfg_aliases",
  "compact_str",
  "cu29",
  "cu29-log",
@@ -505,9 +503,8 @@ dependencies = [
 
 [[package]]
 name = "cu29"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7f9a37a6c8921fefa8a3b67150406c0e9ee1fafe0e04c2a1195330ca9cfc098"
+version = "1.0.0-rc2"
+source = "git+https://github.com/copper-project/copper-rs.git?branch=master#895b9d9481cf1c243d8e0e50cf50e723cbce2580"
 dependencies = [
  "ctrlc",
  "cu-bincode",
@@ -516,6 +513,7 @@ dependencies = [
  "cu29-log",
  "cu29-log-derive",
  "cu29-log-runtime",
+ "cu29-reflect-derive",
  "cu29-runtime",
  "cu29-traits",
  "cu29-unifiedlog",
@@ -523,13 +521,14 @@ dependencies = [
  "cu29-value",
  "rayon",
  "serde",
+ "serde_derive",
+ "spin",
 ]
 
 [[package]]
 name = "cu29-clock"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6cf65f08035b2489217ce759d581db5ddccc55332455d530ded7b8366eeb0c6c"
+version = "1.0.0-rc2"
+source = "git+https://github.com/copper-project/copper-rs.git?branch=master#895b9d9481cf1c243d8e0e50cf50e723cbce2580"
 dependencies = [
  "cortex-m",
  "cu-bincode",
@@ -540,9 +539,8 @@ dependencies = [
 
 [[package]]
 name = "cu29-derive"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "028c12fc9e55fa008d3c76a28d69c1811eaa4e9d9f7f8699b39f75658af924ac"
+version = "1.0.0-rc2"
+source = "git+https://github.com/copper-project/copper-rs.git?branch=master#895b9d9481cf1c243d8e0e50cf50e723cbce2580"
 dependencies = [
  "convert_case 0.11.0",
  "cu29-runtime",
@@ -557,9 +555,8 @@ dependencies = [
 
 [[package]]
 name = "cu29-intern-strs"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "33d3e7582204dba5dffcde55d85b2f45d7acef619f2cfbf824129ef87d8669ef"
+version = "1.0.0-rc2"
+source = "git+https://github.com/copper-project/copper-rs.git?branch=master#895b9d9481cf1c243d8e0e50cf50e723cbce2580"
 dependencies = [
  "anyhow",
  "cu-bincode",
@@ -568,9 +565,8 @@ dependencies = [
 
 [[package]]
 name = "cu29-log"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "71d1d394279a23a17fd04a479b38c1ca054aa41d72cc9e57844cb7c8d2f789b8"
+version = "1.0.0-rc2"
+source = "git+https://github.com/copper-project/copper-rs.git?branch=master#895b9d9481cf1c243d8e0e50cf50e723cbce2580"
 dependencies = [
  "cu-bincode",
  "cu29-clock",
@@ -583,9 +579,8 @@ dependencies = [
 
 [[package]]
 name = "cu29-log-derive"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "111b0f5eb7b6f703ef4fbc04d42523746961ff2b1a11fed1c5002d65a49558be"
+version = "1.0.0-rc2"
+source = "git+https://github.com/copper-project/copper-rs.git?branch=master#895b9d9481cf1c243d8e0e50cf50e723cbce2580"
 dependencies = [
  "cu29-intern-strs",
  "cu29-log",
@@ -597,9 +592,8 @@ dependencies = [
 
 [[package]]
 name = "cu29-log-runtime"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ca0b93b0b1d7f05447a9c7bdce41dce99d162d1dd700b04e34f32a7442a0c7c6"
+version = "1.0.0-rc2"
+source = "git+https://github.com/copper-project/copper-rs.git?branch=master#895b9d9481cf1c243d8e0e50cf50e723cbce2580"
 dependencies = [
  "cu-bincode",
  "cu29-clock",
@@ -613,15 +607,18 @@ dependencies = [
 
 [[package]]
 name = "cu29-reflect-derive"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "90c671389350f742d9a445c946320c0a7fb07dfcdccf7491f1c582091d314e99"
+version = "1.0.0-rc2"
+source = "git+https://github.com/copper-project/copper-rs.git?branch=master#895b9d9481cf1c243d8e0e50cf50e723cbce2580"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
+]
 
 [[package]]
 name = "cu29-runtime"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "19353293573ae55b3dcca4bcc65bb49929f6f10b2e6cbe7340957d6f5ad4b5fc"
+version = "1.0.0-rc2"
+source = "git+https://github.com/copper-project/copper-rs.git?branch=master#895b9d9481cf1c243d8e0e50cf50e723cbce2580"
 dependencies = [
  "arrayvec",
  "clap",
@@ -636,7 +633,7 @@ dependencies = [
  "cu29-unifiedlog",
  "cu29-value",
  "erased-serde",
- "hashbrown 0.16.1",
+ "hashbrown 0.17.1",
  "html-escape",
  "layout-rs",
  "libm",
@@ -658,9 +655,8 @@ dependencies = [
 
 [[package]]
 name = "cu29-traits"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f320328e91b007350d34042a92baf221710cdabb4d8dfa978f5ccc2959511099"
+version = "1.0.0-rc2"
+source = "git+https://github.com/copper-project/copper-rs.git?branch=master#895b9d9481cf1c243d8e0e50cf50e723cbce2580"
 dependencies = [
  "compact_str",
  "cu-bincode",
@@ -672,9 +668,8 @@ dependencies = [
 
 [[package]]
 name = "cu29-unifiedlog"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "98c32ec1bf66bf424add861ecf6c158cafb147cfe836536a2b2b6962022667d3"
+version = "1.0.0-rc2"
+source = "git+https://github.com/copper-project/copper-rs.git?branch=master#895b9d9481cf1c243d8e0e50cf50e723cbce2580"
 dependencies = [
  "cu-bincode",
  "cu29-traits",
@@ -685,20 +680,19 @@ dependencies = [
 
 [[package]]
 name = "cu29-units"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72fbfc0eea49586492af924d2f17a22b300c4ce771af7ead94a77c58e386cab5"
+version = "1.0.0-rc2"
+source = "git+https://github.com/copper-project/copper-rs.git?branch=master#895b9d9481cf1c243d8e0e50cf50e723cbce2580"
 dependencies = [
  "cu-bincode",
+ "cu29-traits",
  "serde",
  "uom",
 ]
 
 [[package]]
 name = "cu29-value"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3dddff4fcbbddabc092587348367b8bba8ecec65b6fbf055d6edfc6ee203fff5"
+version = "1.0.0-rc2"
+source = "git+https://github.com/copper-project/copper-rs.git?branch=master#895b9d9481cf1c243d8e0e50cf50e723cbce2580"
 dependencies = [
  "cu-bincode",
  "cu29-clock",
@@ -1182,8 +1176,6 @@ dependencies = [
  "allocator-api2",
  "equivalent",
  "foldhash 0.2.0",
- "serde",
- "serde_core",
 ]
 
 [[package]]
@@ -1191,6 +1183,13 @@ name = "hashbrown"
 version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
+dependencies = [
+ "allocator-api2",
+ "equivalent",
+ "foldhash 0.2.0",
+ "serde",
+ "serde_core",
+]
 
 [[package]]
 name = "heck"
@@ -2318,9 +2317,9 @@ dependencies = [
 
 [[package]]
 name = "spin"
-version = "0.10.0"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d5fe4ccb98d9c292d56fec89a5e07da7fc4cf0dc11e156b41793132775d3e591"
+checksum = "783f3f6f6b01e295a669edfc402133a5f2553d1f0e81284b3ba4594e80bdd4a2"
 dependencies = [
  "lock_api",
 ]

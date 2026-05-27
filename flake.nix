@@ -41,7 +41,6 @@
 
         buildDeps = with pkgs; [
           pkg-config
-          openssl
         ];
 
         guiRuntime = with pkgs; [
@@ -64,11 +63,7 @@
 
           shellHook = ''
             mkdir -p .direnv/bin
-            export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath guiRuntime}
-            export OPENSSL_NO_VENDOR=1
-            export OPENSSL_DIR=${pkgs.openssl.dev}
-            export OPENSSL_LIB_DIR=${pkgs.openssl.out}/lib
-            export OPENSSL_INCLUDE_DIR=${pkgs.openssl.dev}/include
+            export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath guiRuntime}:$LD_LIBRARY_PATH
             export PKG_CONFIG_PATH=${pkgs.openssl.dev}/lib/pkgconfig
           ''
           + pkgs.lib.concatMapStringsSep "\n" (pkg: ''

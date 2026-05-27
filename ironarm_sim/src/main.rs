@@ -1,11 +1,14 @@
 mod messages;
 mod tasks;
+mod world;
 
-use bevy::app::{App, AppExit};
+use avian3d::prelude::*;
+use bevy::app::{App, AppExit, PluginGroup};
 use bevy::prelude::{
-    DefaultPlugins, Fixed, FixedUpdate, MessageReader, MessageWriter, PostUpdate, Res, ResMut,
-    Resource,
+    DefaultPlugins, FixedUpdate, MessageReader, MessageWriter, PostUpdate, Res, ResMut, Resource,
+    Startup, Update,
 };
+use bevy::render::RenderPlugin;
 use bevy::time::Time;
 use cu29::prelude::*;
 use cu29::simulation::{CuTaskCallbackState, SimOverride};
@@ -50,7 +53,23 @@ fn main() {
         .expect("Failed to start all tasks.");
 
     let mut app = App::new();
-    app.add_plugins(DefaultPlugins);
+    let render_plugin = RenderPlugin {
+        render_creation: bevy::render::settings::WgpuSettings {
+            backends: Some(bevy::render::settings::Backends::VULKAN),
+            instance_flags:
+                bevy::render::settings::InstanceFlags::ALLOW_UNDERLYING_NONCOMPLIANT_ADAPTER,
+            ..Default::default()
+        }
+        .into(),
+        ..Default::default()
+    };
+    app.add_plugins(DefaultPlugins.set(render_plugin));
+    app.add_plugins(PhysicsPlugins::default());
+    app.insert_resource(Gravity::default());
+    app.insert_resource(Time::<Physics>::default());
+    app.insert_resource(world::CameraControl::default());
+    app.add_systems(Startup, world::setup_world);
+    app.add_systems(Update, world::camera_control);
     app.insert_resource(CopperApp {
         app: copper,
         clock,
@@ -63,7 +82,7 @@ fn main() {
 }
 
 fn run_tick(
-    time: Res<Time<Fixed>>,
+    time: Res<Time<Physics>>,
     mut copper: ResMut<CopperApp>,
     mut exit_writer: MessageWriter<AppExit>,
 ) {

@@ -9,9 +9,9 @@ struct BalanceBotSim {}
 
 use bevy::asset::{AssetApp, UnapprovedPathMode};
 use bevy::prelude::{
-    App, AssetPlugin, DefaultPlugins, FixedUpdate, Font, ImagePlugin, Mesh, MinimalPlugins,
-    PluginGroup, PostUpdate, SceneSpawner, StandardMaterial, Startup, Update, Window, WindowPlugin,
-    default,
+    default, App, AssetPlugin, DefaultPlugins, FixedUpdate, Font, ImagePlugin, Mesh,
+    MinimalPlugins, PluginGroup, PostUpdate, SceneSpawner, StandardMaterial, Startup, Update,
+    Window, WindowPlugin,
 };
 use bevy::render::RenderPlugin;
 use bevy::scene::ScenePlugin;
@@ -26,6 +26,8 @@ pub fn make_world(headless: bool) -> App {
     let render_plugin = RenderPlugin {
         render_creation: bevy::render::settings::WgpuSettings {
             backends: Some(bevy::render::settings::Backends::VULKAN),
+            instance_flags:
+                bevy::render::settings::InstanceFlags::ALLOW_UNDERLYING_NONCOMPLIANT_ADAPTER,
             ..Default::default()
         }
         .into(),

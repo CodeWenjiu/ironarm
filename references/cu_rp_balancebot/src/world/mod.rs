@@ -189,9 +189,9 @@ pub fn build_world(app: &mut App, headless: bool, split_monitor: bool) -> &mut A
         .insert_resource(WorldLayout { split_monitor })
         .insert_resource(SimulationState::Running)
         .insert_resource(CameraControl {
-            rotate_sensitivity: 0.05,
-            zoom_sensitivity: 3.5,
-            move_sensitivity: 0.05,
+            rotate_sensitivity: 0.005,
+            zoom_sensitivity: 10.0,
+            move_sensitivity: 0.1,
         })
         .insert_resource(DragControl {
             pixels_per_newton: 100.,

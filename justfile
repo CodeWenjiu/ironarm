@@ -30,3 +30,7 @@ run pkg="cli":
 dag:
     @command -v cu29-rendercfg >/dev/null 2>&1 || cargo install --locked cu29-runtime --version "0.15.0" --bin cu29-rendercfg
     cu29-rendercfg ironarm_core/copperconfig.ron --open
+
+# 删除根目录 copper crash 文件
+crash-clean:
+    rm -f copper-crash-*.txt

@@ -41,6 +41,8 @@
 
         buildDeps = with pkgs; [
           pkg-config
+          clang
+          mold
         ];
 
         guiRuntime = with pkgs; [

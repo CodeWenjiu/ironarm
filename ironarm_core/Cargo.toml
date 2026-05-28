@@ -2,13 +2,15 @@
 name = "ironarm_core"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.85"
+license = "MIT"
 
 [lib]
 name = "ironarm_core"
 path = "src/lib.rs"
 
 [dependencies]
-cu29 = { workspace = true }
-cu-consolemon = { workspace = true }
+cu29-traits = { workspace = true }
 bincode = { workspace = true }
 serde = { workspace = true }
+bevy_reflect = "0.18"

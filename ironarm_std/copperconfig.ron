@@ -28,10 +28,10 @@
         ),
     ],
     cnx: [
-        (src: "cmd_src", dst: "joint_0", msg: "crate::messages::JointCommand"),
-        (src: "cmd_src", dst: "joint_1", msg: "crate::messages::JointCommand"),
-        (src: "joint_0", dst: "state_sink", msg: "crate::messages::JointState"),
-        (src: "joint_1", dst: "state_sink", msg: "crate::messages::JointState"),
+        (src: "cmd_src", dst: "joint_0", msg: "ironarm_core::messages::JointCommand"),
+        (src: "cmd_src", dst: "joint_1", msg: "ironarm_core::messages::JointCommand"),
+        (src: "joint_0", dst: "state_sink", msg: "ironarm_core::messages::JointState"),
+        (src: "joint_1", dst: "state_sink", msg: "ironarm_core::messages::JointState"),
     ],
     monitor: (type: "tasks::monitor::AppMonitor"),
 )

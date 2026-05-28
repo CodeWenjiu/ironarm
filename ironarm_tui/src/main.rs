@@ -10,5 +10,5 @@ fn main() {
         .join("target")
         .join(format!("{APP_NAME}_log.copper"));
 
-    ironarm_core::run_cli(&logger_path, PREALLOCATED_STORAGE_SIZE);
+    ironarm_std::run_tui(&logger_path, PREALLOCATED_STORAGE_SIZE);
 }

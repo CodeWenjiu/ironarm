@@ -1,11 +1,10 @@
 use avian3d::prelude::*;
 use bevy::color::palettes::css;
-use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
+use bevy::input::mouse::{MouseScrollUnit, MouseWheel};
 use bevy::prelude::*;
 
 #[derive(Resource)]
 pub struct CameraControl {
-    pub rotate_sensitivity: f32,
     pub zoom_sensitivity: f32,
     pub move_sensitivity: f32,
 }
@@ -13,7 +12,6 @@ pub struct CameraControl {
 impl Default for CameraControl {
     fn default() -> Self {
         Self {
-            rotate_sensitivity: 0.005,
             zoom_sensitivity: 10.0,
             move_sensitivity: 0.1,
         }
@@ -55,20 +53,16 @@ pub fn setup_world(
     ));
 }
 
-/// 相机控制：中键拖拽旋转、滚轮缩放、WASD/QE 平移
+/// 相机控制：滚轮缩放、WASD/QE 平移
 pub fn camera_control(
     ctrl: Res<CameraControl>,
     keys: Res<ButtonInput<KeyCode>>,
-    mouse_buttons: Res<ButtonInput<MouseButton>>,
     mut scroll_evr: MessageReader<MouseWheel>,
-    mut mouse_motion: MessageReader<MouseMotion>,
     time: Res<Time>,
     mut query: Query<&mut Transform, With<Camera3d>>,
 ) {
     let mut cam = query.single_mut().expect("camera");
     let focal = Vec3::ZERO;
-    let dir = cam.translation - focal;
-    let radius = dir.length();
 
     // zoom
     let forward = cam.forward();
@@ -78,16 +72,6 @@ pub fn camera_control(
             MouseScrollUnit::Pixel => ev.y / 16.0,
         };
         cam.translation += forward * lines * ctrl.zoom_sensitivity * time.delta_secs();
-    }
-
-    // orbit (middle button)
-    if mouse_buttons.pressed(MouseButton::Middle) {
-        for ev in mouse_motion.read() {
-            let yaw = Quat::from_rotation_y(-ev.delta.x * ctrl.rotate_sensitivity);
-            let pitch = Quat::from_rotation_x(-ev.delta.y * ctrl.rotate_sensitivity);
-            cam.translation = focal + (yaw * pitch * dir).normalize() * radius;
-            cam.look_at(focal, Vec3::Y);
-        }
     }
 
     // keyboard movement

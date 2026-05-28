@@ -16,20 +16,20 @@ clean:
 check:
     @cargo check
 
-# 开发模式运行（默认 cli，传 sim 切到仿真）
+# 开发模式运行（默认 tui，传 sim 切到仿真）
 [group('run')]
-dev pkg="cli":
-    @cargo run -p ironarm_{{pkg}}
+dev pkg="tui":
+    @cargo run -p ironarm_{{pkg}} {{if pkg == "sim" { "--features bevy/dynamic_linking" } else { "" }}}
 
 # release 模式运行
 [group('run')]
-run pkg="cli":
+run pkg="tui":
     @cargo run -p ironarm_{{pkg}} --release
 
 # 渲染 DAG 拓扑图
 dag:
     @command -v cu29-rendercfg >/dev/null 2>&1 || cargo install --locked cu29-runtime --version "0.15.0" --bin cu29-rendercfg
-    cu29-rendercfg ironarm_core/copperconfig.ron --open
+    cu29-rendercfg ironarm_std/copperconfig.ron --open
 
 # 删除根目录 copper crash 文件
 crash-clean:

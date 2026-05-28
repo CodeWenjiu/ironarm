@@ -34,6 +34,7 @@ struct CopperApp {
     clock: RobotClock,
     clock_mock: RobotClockMock,
     last_tick: Option<u64>,
+    cmd_tick: u64,
 }
 
 fn main() {
@@ -75,6 +76,7 @@ fn main() {
         clock,
         clock_mock,
         last_tick: None,
+        cmd_tick: 0,
     });
     app.add_systems(FixedUpdate, run_tick);
     app.add_systems(PostUpdate, stop_copper_on_exit);
@@ -92,13 +94,16 @@ fn run_tick(
     }
     copper.last_tick = Some(current_time);
     copper.clock_mock.set_value(current_time);
+    copper.cmd_tick += 1;
 
     let clock = copper.clock.clone();
+    let cmd_tick = copper.cmd_tick;
     let mut cb = move |step: crate::default::SimStep| -> SimOverride {
         match step {
             crate::default::SimStep::CmdSrc(CuTaskCallbackState::Process(_input, output)) => {
+                let angle = if (cmd_tick / 50) % 2 == 0 { 0.5 } else { -0.5 };
                 output.set_payload(JointCommand {
-                    target_angle: 0.5,
+                    target_angle: angle,
                     target_velocity: 0.0,
                     stiffness: 1.0,
                 });

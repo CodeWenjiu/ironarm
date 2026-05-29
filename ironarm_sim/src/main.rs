@@ -1,3 +1,4 @@
+mod arm_config;
 mod messages;
 mod tasks;
 mod world;
@@ -14,7 +15,7 @@ use cu29::prelude::*;
 use cu29::simulation::{CuTaskCallbackState, SimOverride};
 use ironarm_core::messages::JointCommand;
 
-#[copper_runtime(config = "copperconfig.ron", sim_mode = true)]
+#[copper_runtime(config = "../copperconfig.ron", sim_mode = true)]
 struct IronArmSim {}
 
 fn noop_callback(_step: crate::default::SimStep) -> SimOverride {

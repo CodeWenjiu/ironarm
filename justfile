@@ -19,12 +19,12 @@ check:
 # 开发模式运行（默认 tui，传 sim 切到仿真）
 [group('run')]
 dev pkg="tui":
-    @cargo run -p ironarm_{{pkg}} {{if pkg == "sim" { "--features bevy/dynamic_linking" } else { "" }}}
+    @cargo run -p ironarm_{{ pkg }} {{ if pkg == "sim" { "--features bevy/dynamic_linking" } else { "" } }}
 
 # release 模式运行
 [group('run')]
 run pkg="tui":
-    @cargo run -p ironarm_{{pkg}} --release
+    @cargo run -p ironarm_{{ pkg }} --release
 
 # 渲染 DAG 拓扑图
 dag:
@@ -34,3 +34,11 @@ dag:
 # 删除根目录 copper crash 文件
 crash-clean:
     rm -f copper-crash-*.txt
+
+# 运行日志阅读器
+logreader cmd="log-stats" log="target/ironarm_tui_log.copper":
+    @cargo run -p ironarm_logreader -- {{ log }} {{ cmd }}
+
+# 运行离线回放
+resim log="target/ironarm_tui_log.copper":
+    @cargo run -p ironarm_resim -- {{ log }}

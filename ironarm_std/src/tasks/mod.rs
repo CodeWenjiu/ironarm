@@ -9,15 +9,15 @@ pub mod monitor {
 use cu29::prelude::*;
 use ironarm_core::messages::{JointCommand, JointState};
 
-/// 临时：产生测试 JointCommand。作为 DAG 的 source（无上游连接），实现 CuSrcTask。
+/// 关节 0 指令源。sim 模式下由 callback 覆写。
 #[derive(Reflect)]
-pub struct CmdSource {
+pub struct Src0 {
     tick: u64,
 }
 
-impl Freezable for CmdSource {}
+impl Freezable for Src0 {}
 
-impl CuSrcTask for CmdSource {
+impl CuSrcTask for Src0 {
     type Resources<'r> = ();
     type Output<'m> = output_msg!(JointCommand);
 
@@ -30,19 +30,38 @@ impl CuSrcTask for CmdSource {
 
     fn process(&mut self, _ctx: &CuContext, output: &mut Self::Output<'_>) -> CuResult<()> {
         self.tick += 1;
-        let angle = if (self.tick / 50) % 2 == 0 { 0.5 } else { -0.5 };
-        output.set_payload(JointCommand {
-            target_angle: angle,
-            target_velocity: 0.0,
-            stiffness: 1.0,
-        });
-        output.metadata.set_status(format!("cmd={angle:.3} rad"));
-        debug!("CmdSource: tick={}, angle={}", self.tick, angle);
+        output.set_payload(JointCommand::default());
         Ok(())
     }
 }
 
-/// 临时：消费 JointState。作为 DAG 的 sink（无下游连接），实现 CuSinkTask。
+/// 关节 1 指令源。sim 模式下由 callback 覆写。
+#[derive(Reflect)]
+pub struct Src1 {
+    tick: u64,
+}
+
+impl Freezable for Src1 {}
+
+impl CuSrcTask for Src1 {
+    type Resources<'r> = ();
+    type Output<'m> = output_msg!(JointCommand);
+
+    fn new(_config: Option<&ComponentConfig>, _resources: Self::Resources<'_>) -> CuResult<Self>
+    where
+        Self: Sized,
+    {
+        Ok(Self { tick: 0 })
+    }
+
+    fn process(&mut self, _ctx: &CuContext, output: &mut Self::Output<'_>) -> CuResult<()> {
+        self.tick += 1;
+        output.set_payload(JointCommand::default());
+        Ok(())
+    }
+}
+
+/// 消费 JointState。作为 DAG 的 sink。
 #[derive(Reflect)]
 pub struct StateSink;
 

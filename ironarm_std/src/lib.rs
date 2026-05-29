@@ -3,7 +3,7 @@ pub mod tasks;
 use cu29::prelude::*;
 use std::path::Path;
 
-#[copper_runtime(config = "../copperconfig.ron")]
+#[copper_runtime(config = "copperconfig.ron")]
 struct IronArmCli {}
 
 /// 创建并运行 TUI 模式的 Copper 应用。

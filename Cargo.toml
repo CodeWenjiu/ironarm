@@ -1,5 +1,5 @@
 [workspace]
-members = ["ironarm_tui", "ironarm_core", "ironarm_sim", "ironarm_std", "ironarm_logreader", "ironarm_resim"]
+members = ["ironarm_tui", "ironarm_core", "ironarm_std", "ironarm_logreader", "ironarm_resim"]
 resolver = "2"
 
 [profile.dev]
@@ -15,16 +15,3 @@ cu-consolemon = { git = "https://github.com/copper-project/copper-rs.git", branc
 cu29-export = { git = "https://github.com/copper-project/copper-rs.git", branch = "master" }
 bincode = { package = "cu-bincode", version = "2.0", default-features = false, features = ["derive", "alloc"] }
 serde = { version = "1.0", features = ["derive"] }
-bevy = { version = "0.18.0", default-features = false, features = [
-  "x11",
-  "bevy_render",
-  "bevy_window",
-  "bevy_core_pipeline",
-  "bevy_pbr",
-  "png",
-  "zstd_rust",
-  "tonemapping_luts",
-  "reflect_auto_register",
-  "file_watcher",
-] }
-avian3d = { version = "0.6.1", default-features = false, features = ["f32", "3d", "parallel", "xpbd_joints", "parry-f32"] }

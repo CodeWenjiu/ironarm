@@ -29,6 +29,7 @@
             "clippy"
             "rust-analyzer"
             "llvm-tools-preview"
+            "rustc-codegen-cranelift-preview"
           ];
         };
 
@@ -37,6 +38,7 @@
         devPackages = [
           rust-toolchain
           pkgs.stdenv.cc # provides cc/gcc linker for rust-analyzer
+          pkgs.uv
         ];
 
         buildDeps = with pkgs; [

@@ -1,0 +1,23 @@
+__default:
+    @just --list
+
+# Python 仿真项目
+[group('run')]
+run:
+    @uv run main.py
+
+[group('check')]
+lint:
+    @uv run ruff check .
+
+[group('check')]
+fmt:
+    @uv run ruff format .
+
+[group('check')]
+typecheck:
+    @uv run mypy .
+
+[group('check')]
+test:
+    @uv run pytest .

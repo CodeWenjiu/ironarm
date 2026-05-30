@@ -11,34 +11,41 @@ build:
 clean:
     @cargo clean
 
-# 类型检查（不产二进制）
+# 类型检查
 [group('build')]
 check:
     @cargo check
 
-# 开发模式运行（默认 tui，传 sim 切到仿真）
+# 运行 TUI
 [group('run')]
-dev pkg="tui":
-    @cargo run -p ironarm_{{ pkg }} {{ if pkg == "sim" { "--features bevy/dynamic_linking" } else { "" } }}
+dev:
+    @cargo run -p ironarm_tui
 
 # release 模式运行
 [group('run')]
-run pkg="tui":
-    @cargo run -p ironarm_{{ pkg }} --release
+run:
+    @cargo run -p ironarm_tui --release
 
-# 渲染 DAG 拓扑图
-dag:
-    @command -v cu29-rendercfg >/dev/null 2>&1 || cargo install --locked cu29-runtime --version "0.15.0" --bin cu29-rendercfg
-    cu29-rendercfg ironarm_std/copperconfig.ron --open
-
-# 删除根目录 copper crash 文件
-crash-clean:
-    rm -f copper-crash-*.txt
+# 仿真（Python）
+[group('run')]
+sim cmd="":
+    @just --justfile ironarm_sim/justfile --working-directory ironarm_sim {{ if cmd == "" { "sim" } else { cmd } }}
 
 # 运行日志阅读器
+[group('run')]
 logreader cmd="log-stats" log="target/ironarm_tui_log.copper":
     @cargo run -p ironarm_logreader -- {{ log }} {{ cmd }}
 
 # 运行离线回放
+[group('run')]
 resim log="target/ironarm_tui_log.copper":
     @cargo run -p ironarm_resim -- {{ log }}
+
+[group('check')]
+lint:
+    @cargo clippy -- -D warnings
+    @just sim lint
+
+# 删除 copper crash 文件
+crash-clean:
+    rm -f copper-crash-*.txt

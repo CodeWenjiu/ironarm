@@ -7,6 +7,7 @@ name = "ironarm_sim"
 version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
+    "mujoco>=3.9.0",
     "pyside6>=6.11.1",
     "pyte>=0.8.2",
 ]
@@ -22,3 +23,6 @@ dev = [
     "pytest>=9.0.3",
     "ruff>=0.15.15",
 ]
+
+[tool.mypy]
+ignore_missing_imports = true

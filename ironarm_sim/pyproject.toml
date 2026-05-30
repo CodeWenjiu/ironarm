@@ -6,7 +6,10 @@ build-backend = "maturin"
 name = "ironarm_sim"
 version = "0.1.0"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "pyside6>=6.11.1",
+    "pyte>=0.8.2",
+]
 
 [tool.maturin]
 module-name = "ironarm_sim"

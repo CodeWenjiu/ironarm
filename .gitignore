@@ -1,6 +1,7 @@
 /target
 /logs/
 /.direnv
+.direnv
 /.playwright-mcp
 /.deepseek/state
 copper-crash-*

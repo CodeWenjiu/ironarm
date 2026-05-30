@@ -48,8 +48,9 @@
         ];
 
         guiRuntime = with pkgs; [
+          dejavu_fonts
+          noto-fonts
           wayland
-          libxkbcommon
           libGL
           vulkan-loader
           libX11
@@ -57,6 +58,14 @@
           libXrandr
           libXi
           libxcb
+          libxkbcommon
+          glib
+          fontconfig
+          freetype
+          dbus
+          libglvnd
+          libpng
+          zlib
         ];
 
         allPackages = buildDeps ++ guiRuntime ++ devPackages;

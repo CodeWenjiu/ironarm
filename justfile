@@ -64,4 +64,4 @@ resim log="target/ironarm_tui_log.copper":
 
 # 删除 copper crash 文件
 crash-clean:
-    rm -f copper-crash-*.txt
+    find . -name "copper-crash-*.txt" -delete

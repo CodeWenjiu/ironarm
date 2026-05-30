@@ -1,5 +1,5 @@
 [workspace]
-members = ["ironarm_tui", "ironarm_core", "ironarm_std", "ironarm_logreader", "ironarm_resim"]
+members = ["ironarm_tui", "ironarm_core", "ironarm_std", "ironarm_logreader", "ironarm_resim", "ironarm_sim/rust_core"]
 resolver = "2"
 
 [profile.dev]

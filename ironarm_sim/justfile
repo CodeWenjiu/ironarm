@@ -1,7 +1,16 @@
-__default:
-    @just --list
-
 # Python 仿真项目
+
+# Debug 构建 Rust 扩展
+[group('build')]
+build:
+    @uv run maturin develop --uv
+
+# Release 构建 Rust 扩展
+[group('build')]
+build-release:
+    @uv run maturin develop --uv --release
+
+# 运行仿真（需先 build）
 [group('run')]
 run:
     @uv run main.py

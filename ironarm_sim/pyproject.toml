@@ -12,6 +12,7 @@ dependencies = [
     "pyte>=0.8.2",
 ]
 
+
 [tool.maturin]
 module-name = "ironarm_sim"
 manifest-path = "rust_core/Cargo.toml"

@@ -6,3 +6,4 @@
 /.deepseek/state
 copper-crash-*
 cu29_logstats.json
+__pycache__/

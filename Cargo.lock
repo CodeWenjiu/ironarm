@@ -1451,8 +1451,10 @@ version = "0.1.0"
 dependencies = [
  "bevy_reflect",
  "cu-bincode",
+ "cu29",
  "cu29-traits",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1479,6 +1481,7 @@ dependencies = [
 name = "ironarm_sim"
 version = "0.1.0"
 dependencies = [
+ "ironarm_core",
  "pyo3",
 ]
 

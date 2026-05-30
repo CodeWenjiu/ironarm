@@ -1,37 +1,79 @@
 (
     tasks: [
         (
-            id: "cmd_src_0",
-            type: "tasks::Src0",
+            id: "motion",
+            type: "ironarm_core::tasks::MotionPlanner",
+            config: {
+                "l0": 1.0,
+                "l1": 2.0,
+                "base_z": 0.15,
+                "period": 20.0,
+            },
         ),
         (
-            id: "cmd_src_1",
-            type: "tasks::Src1",
+            id: "ik_0",
+            type: "ironarm_core::tasks::IKSolver",
+            config: {
+                "joint_index": 0,
+                "l0": 1.0,
+                "l1": 2.0,
+                "base_z": 0.15,
+                "period": 20.0,
+            },
         ),
-        // 关节 0
+        (
+            id: "ik_1",
+            type: "ironarm_core::tasks::IKSolver",
+            config: {
+                "joint_index": 1,
+                "l0": 1.0,
+                "l1": 2.0,
+                "base_z": 0.15,
+                "period": 20.0,
+            },
+        ),
+        (
+            id: "interp_0",
+            type: "ironarm_core::tasks::JointInterpolator",
+            config: {
+                "joint_index": 0,
+                "smoothing": 0.3,
+            },
+        ),
+        (
+            id: "interp_1",
+            type: "ironarm_core::tasks::JointInterpolator",
+            config: {
+                "joint_index": 1,
+                "smoothing": 0.3,
+            },
+        ),
         (
             id: "joint_0",
-            type: "tasks::JointDriver",
+            type: "ironarm_core::tasks::JointDriver",
             config: {
                 "joint_index": 0,
             },
         ),
-        // 关节 1
         (
             id: "joint_1",
-            type: "tasks::JointDriver",
+            type: "ironarm_core::tasks::JointDriver",
             config: {
                 "joint_index": 1,
             },
         ),
         (
             id: "state_sink",
-            type: "tasks::StateSink",
+            type: "ironarm_core::tasks::StateSink",
         ),
     ],
     cnx: [
-        (src: "cmd_src_0", dst: "joint_0", msg: "ironarm_core::messages::JointCommand"),
-        (src: "cmd_src_1", dst: "joint_1", msg: "ironarm_core::messages::JointCommand"),
+        (src: "motion", dst: "ik_0", msg: "ironarm_core::messages::CartesianWaypoint"),
+        (src: "motion", dst: "ik_1", msg: "ironarm_core::messages::CartesianWaypoint"),
+        (src: "ik_0", dst: "interp_0", msg: "ironarm_core::messages::JointWaypoint"),
+        (src: "ik_1", dst: "interp_1", msg: "ironarm_core::messages::JointWaypoint"),
+        (src: "interp_0", dst: "joint_0", msg: "ironarm_core::messages::JointCommand"),
+        (src: "interp_1", dst: "joint_1", msg: "ironarm_core::messages::JointCommand"),
         (src: "joint_0", dst: "state_sink", msg: "ironarm_core::messages::JointState"),
         (src: "joint_1", dst: "state_sink", msg: "ironarm_core::messages::JointState"),
     ],

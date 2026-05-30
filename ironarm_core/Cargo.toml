@@ -9,7 +9,10 @@ license = "MIT"
 name = "ironarm_core"
 path = "src/lib.rs"
 
+[dev-dependencies]
+serde_json = "1.0"
 [dependencies]
+cu29 = { workspace = true }
 cu29-traits = { workspace = true }
 bincode = { workspace = true }
 serde = { workspace = true }

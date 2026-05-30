@@ -3,25 +3,50 @@ use cu29_traits::Reflect;
 
 use serde::{Deserialize, Serialize};
 
-/// 上层发给关节驱动器的目标指令。
+// ---------------------------------------------------------------------------
+// Joint-level messages
+// ---------------------------------------------------------------------------
+
+/// Task → joint driver: target pose for a single joint.
 #[derive(Debug, Clone, Encode, Decode, Serialize, Deserialize, Reflect)]
 pub struct JointCommand {
-    /// 目标角度 (rad)
     pub target_angle: f32,
-    /// 目标角速度 (rad/s)，预留
     pub target_velocity: f32,
-    /// 力矩柔顺度 0.0~1.0，预留
     pub stiffness: f32,
 }
 
-/// 关节驱动器反馈的当前状态。
+/// Joint driver → monitor: current joint state.
 #[derive(Debug, Clone, Encode, Decode, Serialize, Deserialize, Reflect)]
 pub struct JointState {
-    /// 当前角度 (rad)
     pub current_angle: f32,
-    /// 当前角速度 (rad/s)
     pub current_velocity: f32,
 }
+
+// ---------------------------------------------------------------------------
+// Pipeline messages (motion → IK → interpolation → joints)
+// ---------------------------------------------------------------------------
+
+/// Motion planner → IK solver: a target in Cartesian space.
+#[derive(Debug, Clone, Default, Encode, Decode, Serialize, Deserialize, Reflect)]
+pub struct CartesianWaypoint {
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+}
+
+/// IK solver → interpolator: raw joint angles for all joints.
+///
+/// The `angles` vector length equals the number of joints configured in
+/// the IK module.  Each downstream `JointInterpolator` picks the angle
+/// at the index that matches its own `joint_index`.
+#[derive(Debug, Clone, Default, Encode, Decode, Serialize, Deserialize, Reflect)]
+pub struct JointWaypoint {
+    pub angles: std::vec::Vec<f32>,
+}
+
+// ---------------------------------------------------------------------------
+// Defaults
+// ---------------------------------------------------------------------------
 
 impl Default for JointCommand {
     fn default() -> Self {

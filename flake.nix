@@ -33,11 +33,9 @@
           ];
         };
 
-        # Packages whose binaries should be auto-linked into .direnv/bin
-        # (so Zed / other tools that don't inherit the full Nix PATH can find them).
         devPackages = [
           rust-toolchain
-          pkgs.stdenv.cc # provides cc/gcc linker for rust-analyzer
+          pkgs.stdenv.cc
           pkgs.uv
         ];
 

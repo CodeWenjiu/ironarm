@@ -46,3 +46,7 @@
 5. **验证即交付。** 写完配置必须 `just --list` / `cargo check` 跑通再汇报结果，不允许「应该可以了」就交差。
 6. **所有终端命令必须在 nix-shell 中运行。** 本项目通过 `flake.nix` 管理开发环境（工具链、X11 库、GPU 驱动等）。直接在当前 shell 运行 `cargo` 或程序二进制可能出现缺少依赖的错误。运行命令时使用 `nix develop` 或确保已在 nix-shell 中。
 7. **改完必须自测再汇报。** 每次代码修改完成后，至少运行 `cargo check`（Rust 侧）/ `uv run ruff check . && uv run mypy .`（Python 侧）以及 Python 导入测试，验证无编译错误和类型错误。涉及 GUI / Qt / OpenGL 的改动还需在无头环境下跑最小初始化测试确认不会 crash。不允许「应该可以了」就交差，必须贴出测试通过的输出。
+
+8. **justfile 内不得调用 nix。** 项目使用 nix 管理依赖，但应当是可选的——满足环境依赖的开发者不使用 nix 也应能正常运行。justfile recipe 中禁止出现 \、\、\ 等 nix 命令。如果需要 nix 环境，应由调用方通过 \ 提供，而非在被调用方内部绑定。
+
+8. **justfile 内不得调用 nix。** 项目使用 nix 管理依赖，但应当是可选的——满足环境依赖的开发者不使用 nix 也应能正常运行。justfile recipe 中禁止出现任何 nix 命令。如果需要 nix 环境，应由调用方通过 "nix develop --command just ..." 提供，而非在被调用方内部绑定。

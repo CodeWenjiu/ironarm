@@ -36,11 +36,11 @@ _tui-run:
 
 # 内部：Sim debug
 _sim-dev:
-    @just --justfile ironarm_sim/justfile --working-directory ironarm_sim build run
+    @just --justfile ironarm_sim/justfile --working-directory ironarm_sim run
 
 # 内部：Sim release
 _sim-run:
-    @just --justfile ironarm_sim/justfile --working-directory ironarm_sim build-release run
+    @just --justfile ironarm_sim/justfile --working-directory ironarm_sim run
 
 # Rust 代码检查
 _lint-rs:
@@ -64,4 +64,4 @@ resim log="target/ironarm_tui_log.copper":
 
 # 删除 copper crash 文件
 crash-clean:
-    find . -name "copper-crash-*.txt" -delete
+    rm -f copper-crash-*.txt

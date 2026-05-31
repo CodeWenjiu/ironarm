@@ -9,11 +9,16 @@ license = "MIT"
 name = "ironarm_core"
 path = "src/lib.rs"
 
-[dev-dependencies]
-serde_json = "1.0"
+[features]
+default = ["std"]
+std = ["dep:cu29", "dep:cu29-traits", "dep:bevy_reflect"]
+
 [dependencies]
-cu29 = { workspace = true }
-cu29-traits = { workspace = true }
+cu29 = { workspace = true, optional = true }
+cu29-traits = { workspace = true, optional = true }
+bevy_reflect = { version = "0.18", optional = true }
 bincode = { workspace = true }
 serde = { workspace = true }
-bevy_reflect = "0.18"
+
+[dev-dependencies]
+serde_json = "1.0"

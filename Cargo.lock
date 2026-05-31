@@ -1482,6 +1482,7 @@ name = "ironarm_sim"
 version = "0.1.0"
 dependencies = [
  "ironarm_core",
+ "ironarm_std",
  "pyo3",
 ]
 

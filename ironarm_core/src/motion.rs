@@ -3,7 +3,8 @@
 use crate::messages::CartesianWaypoint;
 
 /// Geometry parameters shared with the IK module.
-#[derive(Debug, Clone, cu29_traits::Reflect)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "std", derive(cu29_traits::Reflect))]
 pub struct ArmGeometry {
     pub l0: f32,
     pub l1: f32,

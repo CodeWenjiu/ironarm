@@ -1,3 +1,4 @@
+use alloc::format;
 use crate::math::interpolate;
 use crate::messages::{JointCommand, JointWaypoint};
 use cu29::prelude::*;

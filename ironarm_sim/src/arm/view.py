@@ -1,14 +1,10 @@
-"""3-D arm view — MuJoCo GPU-accelerated rendering via QOpenGLWidget.
-
-Supports hot-reload: edit ``models/ironarm.xml`` and the arm updates live.
-"""
+"""3-D arm view — MuJoCo GPU-accelerated rendering via QOpenGLWidget."""
 
 import mujoco
 from PySide6.QtCore import QPoint, Qt, QTimer
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
-import ironarm_sim as _rust  # type: ignore[import-untyped]
-from .model import MODEL_PATH, trajectory
+from .model import MODEL_PATH
 
 
 class Arm3DView(QOpenGLWidget):
@@ -17,7 +13,6 @@ class Arm3DView(QOpenGLWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        # --- MuJoCo model (hot-reloadable) ---
         self._model: mujoco.MjModel | None = None
         self._data: mujoco.MjData | None = None
         self._scene: mujoco.MjvScene | None = None
@@ -28,13 +23,6 @@ class Arm3DView(QOpenGLWidget):
 
         self._load_model()
 
-        # --- Arm params ---
-        self._l0 = 1.0
-        self._l1 = 2.0
-        self._base_z = 0.15
-        self._t = 0.0
-
-        # --- Orbit camera ---
         self._azimuth = 30.0
         self._elevation = 25.0
         self._distance = 3.5
@@ -46,17 +34,13 @@ class Arm3DView(QOpenGLWidget):
 
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._tick)
-        self._timer.start(16)  # ~60 fps
+        self._timer.start(16)
+        QTimer.singleShot(0, self._init_gl)
 
-        # --- Hot-reload watcher ---
         self._watcher = QTimer(self)
         self._watcher.timeout.connect(self._poll_reload)
-        self._watcher.start(1000)  # check every second
+        self._watcher.start(1000)
         self._mtime = self._file_mtime()
-
-    # ------------------------------------------------------------------
-    # Model loading / hot-reload
-    # ------------------------------------------------------------------
 
     @staticmethod
     def _file_mtime() -> float:
@@ -68,20 +52,16 @@ class Arm3DView(QOpenGLWidget):
             return 0.0
 
     def _load_model(self) -> None:
-        # Save joint angles if we have an existing model
         saved = self._save_joint_angles()
-
         self._model = mujoco.MjModel.from_xml_path(MODEL_PATH)
         self._data = mujoco.MjData(self._model)
         self._scene = mujoco.MjvScene(self._model, maxgeom=100)
-        self._context = None  # will be recreated in initializeGL
-
-        # Restore joint angles (name-matched against new model)
+        self._context = None
         for jname, angle in saved:
             try:
                 self._data.joint(jname).qpos[0] = angle
             except Exception:
-                pass  # joint renamed or removed — ignore
+                pass
 
     def _save_joint_angles(self) -> list[tuple[str, float]]:
         if self._model is None or self._data is None:
@@ -102,11 +82,21 @@ class Arm3DView(QOpenGLWidget):
             return
         self._needs_reload = False
         self._load_model()
-        # Re-initialise the GL context (needs a current GL context).
         self.makeCurrent()
         self._context = mujoco.MjrContext(
             self._model, mujoco.mjtFontScale.mjFONTSCALE_150
         )
+        self.doneCurrent()
+
+    def _init_gl(self) -> None:
+        if self._context is not None:
+            return
+        self.makeCurrent()
+        self._context = mujoco.MjrContext(
+            self._model, mujoco.mjtFontScale.mjFONTSCALE_150
+        )
+        gl = self.context().functions()
+        gl.glClearColor(0.22, 0.22, 0.24, 1.0)
         self.doneCurrent()
 
     # ------------------------------------------------------------------
@@ -117,26 +107,22 @@ class Arm3DView(QOpenGLWidget):
         self._apply_reload_if_needed()
         if self._data is None:
             return
-
-        dt = 1.0 / 60.0
-        self._t += dt
-
-        result = _rust.compute_angles(self._l0, self._l1, self._base_z, self._t)
-        if result is not None:
-            j0, j1 = result
-            tx, ty, tz = trajectory(self._t, self._base_z)
-            self._data.joint("j0").qpos[0] = j0
-            self._data.joint("j1").qpos[0] = -j1
-            self._data.body("target").xpos[:] = (tx, ty, tz)
-
+        j0, j1 = getattr(self, "_angles", (0.0, 0.0))
+        self._data.joint("j0").qpos[0] = j0
+        self._data.joint("j1").qpos[0] = -j1
         mujoco.mj_forward(self._model, self._data)
         self.update()
+
+    def _on_angles(self, j0: float, j1: float) -> None:
+        self._angles = (j0, j1)
 
     # ------------------------------------------------------------------
     # OpenGL
     # ------------------------------------------------------------------
 
     def initializeGL(self) -> None:
+        if self._model is None:
+            return
         self._context = mujoco.MjrContext(
             self._model, mujoco.mjtFontScale.mjFONTSCALE_150
         )
@@ -146,10 +132,8 @@ class Arm3DView(QOpenGLWidget):
     def paintGL(self) -> None:
         if self._context is None or self._scene is None:
             return
-
         gl = self.context().functions()
         gl.glClear(0x00004000 | 0x00000100)
-
         self._update_camera()
         mujoco.mjv_updateScene(
             self._model,
@@ -160,7 +144,6 @@ class Arm3DView(QOpenGLWidget):
             mujoco.mjtCatBit.mjCAT_ALL,
             self._scene,
         )
-
         w, h = self.width(), self.height()
         mujoco.mjr_render(mujoco.MjrRect(0, 0, w, h), self._scene, self._context)
 
@@ -171,7 +154,7 @@ class Arm3DView(QOpenGLWidget):
         self._cam.elevation = -self._elevation
 
     # ------------------------------------------------------------------
-    # Mouse — orbit
+    # Mouse
     # ------------------------------------------------------------------
 
     def mousePressEvent(self, event) -> None:

@@ -9,7 +9,6 @@ requires-python = ">=3.13"
 dependencies = [
     "mujoco>=3.9.0",
     "pyside6>=6.11.1",
-    "pyte>=0.8.2",
 ]
 
 

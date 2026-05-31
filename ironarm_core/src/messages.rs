@@ -1,6 +1,4 @@
 use bincode::{Decode, Encode};
-use cu29_traits::Reflect;
-
 use serde::{Deserialize, Serialize};
 
 // ---------------------------------------------------------------------------
@@ -8,7 +6,8 @@ use serde::{Deserialize, Serialize};
 // ---------------------------------------------------------------------------
 
 /// Task → joint driver: target pose for a single joint.
-#[derive(Debug, Clone, Encode, Decode, Serialize, Deserialize, Reflect)]
+#[derive(Debug, Clone, Encode, Decode, Serialize, Deserialize)]
+#[cfg_attr(feature = "std", derive(cu29_traits::Reflect))]
 pub struct JointCommand {
     pub target_angle: f32,
     pub target_velocity: f32,
@@ -16,7 +15,8 @@ pub struct JointCommand {
 }
 
 /// Joint driver → monitor: current joint state.
-#[derive(Debug, Clone, Encode, Decode, Serialize, Deserialize, Reflect)]
+#[derive(Debug, Clone, Encode, Decode, Serialize, Deserialize)]
+#[cfg_attr(feature = "std", derive(cu29_traits::Reflect))]
 pub struct JointState {
     pub current_angle: f32,
     pub current_velocity: f32,
@@ -27,7 +27,8 @@ pub struct JointState {
 // ---------------------------------------------------------------------------
 
 /// Motion planner → IK solver: a target in Cartesian space.
-#[derive(Debug, Clone, Default, Encode, Decode, Serialize, Deserialize, Reflect)]
+#[derive(Debug, Clone, Encode, Decode, Serialize, Deserialize)]
+#[cfg_attr(feature = "std", derive(Default, cu29_traits::Reflect))]
 pub struct CartesianWaypoint {
     pub x: f32,
     pub y: f32,
@@ -35,17 +36,14 @@ pub struct CartesianWaypoint {
 }
 
 /// IK solver → interpolator: raw joint angles for all joints.
-///
-/// The `angles` vector length equals the number of joints configured in
-/// the IK module.  Each downstream `JointInterpolator` picks the angle
-/// at the index that matches its own `joint_index`.
-#[derive(Debug, Clone, Default, Encode, Decode, Serialize, Deserialize, Reflect)]
+#[derive(Debug, Clone, Default, Encode, Decode, Serialize, Deserialize)]
+#[cfg_attr(feature = "std", derive(cu29_traits::Reflect))]
 pub struct JointWaypoint {
-    pub angles: std::vec::Vec<f32>,
+    pub angles: alloc::vec::Vec<f32>,
 }
 
 // ---------------------------------------------------------------------------
-// Defaults
+// Defaults (custom — stiffness defaults to 1.0)
 // ---------------------------------------------------------------------------
 
 impl Default for JointCommand {

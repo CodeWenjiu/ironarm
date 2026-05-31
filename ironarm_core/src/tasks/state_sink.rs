@@ -1,7 +1,7 @@
-use crate::messages::JointState;
+use crate::messages::{JointState};
 use cu29::prelude::*;
 
-/// Consumes JointState as the DAG sink.
+/// DAG sink — forwards joint states to the registered callback.
 #[derive(Reflect)]
 pub struct StateSink;
 
@@ -20,8 +20,9 @@ impl CuSinkTask for StateSink {
 
     fn process(&mut self, _ctx: &CuContext, input: &Self::Input<'_>) -> CuResult<()> {
         let (j0, j1) = *input;
-        let _a0 = j0.payload().map(|s| s.current_angle).unwrap_or(0.0);
-        let _a1 = j1.payload().map(|s| s.current_angle).unwrap_or(0.0);
+        let a0 = j0.payload().map(|s| s.current_angle).unwrap_or(0.0);
+        let a1 = j1.payload().map(|s| s.current_angle).unwrap_or(0.0);
+        crate::state::notify_joint_angles(a0, a1);
         Ok(())
     }
 }

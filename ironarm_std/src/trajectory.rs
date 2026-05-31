@@ -3,28 +3,37 @@
 //! Pure-math, `no_std` compatible.  Callers sample the trajectory at a
 //! given time *t* (in seconds) to obtain a Cartesian waypoint.
 
-use crate::messages::CartesianWaypoint;
-use alloc::vec::Vec;
+use ironarm_core::messages::CartesianWaypoint;
+use std::vec::Vec;
 
 // ---------------------------------------------------------------------------
 // Trajectory type
 // ---------------------------------------------------------------------------
 
 /// A trajectory maps time *t* (seconds) to a Cartesian waypoint.
-/// Supports circular, linear, and multi-waypoint trajectories.
 #[derive(Debug, Clone)]
 pub enum Trajectory {
-    /// Circular trajectory in the X-Y plane at height *z*, repeating every
-    /// *period* seconds.
+    /// Horizontal circle at height *z*.
     Circle {
-        cx: f32,     // centre x
-        cy: f32,     // centre y
-        r: f32,      // radius
-        z: f32,      // height
-        period: f32, // seconds per full revolution
+        cx: f32,
+        cy: f32,
+        r: f32,
+        z: f32,
+        period: f32,
+    },
+    /// Circle in an arbitrary plane (not parallel to any standard plane).
+    /// `nx, ny, nz` is the plane normal (auto-normalised).
+    TiltedCircle {
+        cx: f32,
+        cy: f32,
+        cz: f32,
+        nx: f32,
+        ny: f32,
+        nz: f32,
+        r: f32,
+        period: f32,
     },
     /// Linear interpolation from *start* to *end* over *duration* seconds.
-    /// After *duration*, the trajectory holds at *end* (clamped).
     Linear {
         start: CartesianWaypoint,
         end: CartesianWaypoint,
@@ -37,6 +46,18 @@ pub enum Trajectory {
         points: Vec<(f32, CartesianWaypoint)>,
         looped: bool,
     },
+}
+
+impl Default for Trajectory {
+    fn default() -> Self {
+        Self::Circle {
+            cx: 0.0,
+            cy: 0.0,
+            r: 0.0,
+            z: 0.0,
+            period: 1.0,
+        }
+    }
 }
 
 impl Trajectory {
@@ -56,6 +77,25 @@ impl Trajectory {
                     x: cx + r * phase.cos(),
                     y: cy + r * phase.sin(),
                     z: *z,
+                }
+            }
+            Self::TiltedCircle {
+                cx,
+                cy,
+                cz,
+                nx,
+                ny,
+                nz,
+                r,
+                period,
+            } => {
+                use core::f32::consts::PI;
+                let (u, v) = plane_basis(*nx, *ny, *nz);
+                let phase = t * 2.0 * PI / period;
+                CartesianWaypoint {
+                    x: cx + r * (phase.cos() * u.0 + phase.sin() * v.0),
+                    y: cy + r * (phase.cos() * u.1 + phase.sin() * v.1),
+                    z: cz + r * (phase.cos() * u.2 + phase.sin() * v.2),
                 }
             }
             Self::Linear {
@@ -103,6 +143,35 @@ pub fn linear(start: CartesianWaypoint, end: CartesianWaypoint, duration: f32) -
     }
 }
 
+/// Create a tilted-circle trajectory (plane defined by normal vector).
+pub fn tilted_circle(
+    cx: f32,
+    cy: f32,
+    cz: f32,
+    nx: f32,
+    ny: f32,
+    nz: f32,
+    r: f32,
+    period: f32,
+) -> Trajectory {
+    let mag = f32::hypot(f32::hypot(nx, ny), nz);
+    let (nx, ny, nz) = if mag > 0.0 {
+        (nx / mag, ny / mag, nz / mag)
+    } else {
+        (0.0, 0.0, 1.0)
+    };
+    Trajectory::TiltedCircle {
+        cx,
+        cy,
+        cz,
+        nx,
+        ny,
+        nz,
+        r,
+        period,
+    }
+}
+
 /// Create a waypoint trajectory.
 pub fn waypoints(points: Vec<(f32, CartesianWaypoint)>, looped: bool) -> Trajectory {
     Trajectory::Waypoints { points, looped }
@@ -111,6 +180,31 @@ pub fn waypoints(points: Vec<(f32, CartesianWaypoint)>, looped: bool) -> Traject
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/// Build two orthogonal unit vectors (u, v) spanning the plane with normal n.
+fn plane_basis(nx: f32, ny: f32, nz: f32) -> ((f32, f32, f32), (f32, f32, f32)) {
+    // Choose a reference vector not parallel to n
+    let (rx, ry, rz) = if nx.abs() < 0.9 {
+        (1.0, 0.0, 0.0)
+    } else {
+        (0.0, 1.0, 0.0)
+    };
+    // u = normalize(cross(r, n))
+    let ux = ry * nz - rz * ny;
+    let uy = rz * nx - rx * nz;
+    let uz = rx * ny - ry * nx;
+    let um = f32::hypot(f32::hypot(ux, uy), uz);
+    let (ux, uy, uz) = if um > 0.0 {
+        (ux / um, uy / um, uz / um)
+    } else {
+        (1.0, 0.0, 0.0)
+    };
+    // v = cross(n, u)
+    let vx = ny * uz - nz * uy;
+    let vy = nz * ux - nx * uz;
+    let vz = nx * uy - ny * ux;
+    ((ux, uy, uz), (vx, vy, vz))
+}
 
 fn lerp(a: f32, b: f32, t: f32) -> f32 {
     a + (b - a) * t
@@ -170,7 +264,7 @@ fn sample_waypoints(
 // Old compatibility helpers (keep circle_waypoint as a thin wrapper)
 // ---------------------------------------------------------------------------
 
-use crate::motion::ArmGeometry4Dof;
+use ironarm_core::motion::ArmGeometry4Dof;
 
 /// Compute joint angles for the circular trajectory at time *t*.
 pub fn compute_circle_angles(
@@ -181,7 +275,7 @@ pub fn compute_circle_angles(
 ) -> Option<(f32, f32, f32, f32)> {
     let geo = ArmGeometry4Dof {
         l1,
-        l2: l2_eff - 0.06, // approximate L2
+        l2: l2_eff - 0.06,
         l2_eff,
         shoulder_z,
     };
@@ -189,8 +283,8 @@ pub fn compute_circle_angles(
     let r = l1 + (l2_eff * l2_eff - h * h).sqrt();
     let z = shoulder_z + h;
     let wp = circle(0.0, 0.0, r, z, 20.0).sample(t);
-    crate::ik::solve_ik(
-        &crate::ik::EETarget {
+    ironarm_core::ik::solve_ik(
+        &ironarm_core::ik::EETarget {
             x: wp.x,
             y: wp.y,
             z: wp.z,
@@ -238,7 +332,7 @@ mod tests {
 
     #[test]
     fn test_waypoints() {
-        use alloc::vec;
+        use std::vec;
         let traj = waypoints(
             vec![
                 (
@@ -279,7 +373,7 @@ mod tests {
 
     #[test]
     fn test_waypoints_looped() {
-        use alloc::vec;
+        use std::vec;
         let traj = waypoints(
             vec![
                 (

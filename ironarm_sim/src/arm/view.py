@@ -1,5 +1,8 @@
 """3-D arm view — MuJoCo GPU-accelerated rendering via QOpenGLWidget."""
 
+from collections import deque
+
+import ironarm_sim as _rust  # type: ignore[import-untyped]
 import mujoco
 from PySide6.QtCore import QPoint, Qt, QTimer
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
@@ -21,6 +24,9 @@ class Arm3DView(QOpenGLWidget):
         self._opt = mujoco.MjvOption()
         self._needs_reload = False
 
+        # EE trail: ring buffer (must be before _load_model)
+        self._trail: deque[tuple[float, float, float]] = deque(maxlen=200)
+
         self._load_model()
 
         self._azimuth = 30.0
@@ -35,6 +41,11 @@ class Arm3DView(QOpenGLWidget):
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._tick)
         self._timer.start(16)
+
+        self._poll_timer = QTimer(self)
+        self._poll_timer.timeout.connect(self._poll)
+        self._poll_timer.start(5)  # poll ring buffer at 200 Hz
+
         QTimer.singleShot(0, self._init_gl)
 
         self._watcher = QTimer(self)
@@ -55,8 +66,9 @@ class Arm3DView(QOpenGLWidget):
         saved = self._save_joint_angles()
         self._model = mujoco.MjModel.from_xml_path(MODEL_PATH)
         self._data = mujoco.MjData(self._model)
-        self._scene = mujoco.MjvScene(self._model, maxgeom=100)
+        self._scene = mujoco.MjvScene(self._model, maxgeom=1000)
         self._context = None
+        self._trail.clear()
         for jname, angle in saved:
             try:
                 self._data.joint(jname).qpos[0] = angle
@@ -103,6 +115,12 @@ class Arm3DView(QOpenGLWidget):
     # Simulation (4-DOF arm: j0..j3)
     # ------------------------------------------------------------------
 
+    def _poll(self) -> None:
+        """Read latest state from seqlock."""
+        state = _rust.poll_state()
+        if state is not None:
+            self._angles = state
+
     def _tick(self) -> None:
         self._apply_reload_if_needed()
         if self._data is None:
@@ -118,19 +136,12 @@ class Arm3DView(QOpenGLWidget):
         jid = self._model.body_jntadr[bid]
         self._data.qpos[jid : jid + 3] = (wx, wy, wz)
         mujoco.mj_forward(self._model, self._data)
-        self.update()
 
-    def _on_angles(
-        self,
-        j0: float,
-        j1: float,
-        j2: float,
-        j3: float,
-        wx: float,
-        wy: float,
-        wz: float,
-    ) -> None:
-        self._angles = (j0, j1, j2, j3, wx, wy, wz)
+        # Record EE position for trail
+        ee_pos = self._data.xpos[self._model.body("ee").id]
+        self._trail.append((float(ee_pos[0]), float(ee_pos[1]), float(ee_pos[2])))
+
+        self.update()
 
     # ------------------------------------------------------------------
     # OpenGL
@@ -160,6 +171,22 @@ class Arm3DView(QOpenGLWidget):
             mujoco.mjtCatBit.mjCAT_ALL,
             self._scene,
         )
+
+        # Render EE trail
+        trail_rgba = (1.0, 0.3, 0.3, 0.6)
+        for i, (px, py, pz) in enumerate(self._trail):
+            if self._scene.ngeom < self._scene.maxgeom:
+                g = self._scene.geoms[self._scene.ngeom]
+                mujoco.mjv_initGeom(
+                    g,
+                    mujoco.mjtGeom.mjGEOM_SPHERE,
+                    (0.012, 0.0, 0.0),
+                    (px, py, pz),
+                    (1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0),
+                    trail_rgba,
+                )
+                self._scene.ngeom += 1
+
         w, h = self.width(), self.height()
         mujoco.mjr_render(mujoco.MjrRect(0, 0, w, h), self._scene, self._context)
 

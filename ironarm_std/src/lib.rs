@@ -1,4 +1,6 @@
+pub mod ringbuf;
 pub mod tasks;
+pub mod trajectory;
 
 use cu29::prelude::*;
 use std::path::Path;

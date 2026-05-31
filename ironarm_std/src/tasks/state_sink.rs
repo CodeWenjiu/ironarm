@@ -1,34 +1,9 @@
+use crate::ringbuf::{self, ArmState};
 use cu29::prelude::*;
 use ironarm_core::messages::{CartesianWaypoint, JointState};
-use std::sync::{Mutex, OnceLock};
 
-// ---------------------------------------------------------------------------
-// Safe callback registry (std, no unsafe)
-// ---------------------------------------------------------------------------
-
-type ArmCallback = Box<dyn Fn(f32, f32, f32, f32, f32, f32, f32) + Send + Sync>;
-static CALLBACK: OnceLock<Mutex<Option<ArmCallback>>> = OnceLock::new();
-
-pub fn set_callback(cb: ArmCallback) {
-    CALLBACK
-        .get_or_init(|| Mutex::new(None))
-        .lock()
-        .unwrap()
-        .replace(cb);
-}
-
-fn notify(j0: f32, j1: f32, j2: f32, j3: f32, wx: f32, wy: f32, wz: f32) {
-    if let Some(mutex) = CALLBACK.get() {
-        if let Some(ref cb) = *mutex.lock().unwrap() {
-            cb(j0, j1, j2, j3, wx, wy, wz);
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
-// StateSink — DAG endpoint for 4-DOF arm
-// ---------------------------------------------------------------------------
-
+/// DAG sink — collects waypoint + 4 joint states and pushes to lock-free
+/// ring buffer.  Python side polls the buffer via QTimer (no GIL, no mutex).
 #[derive(Reflect)]
 pub struct StateSink {
     last: [f32; 4],
@@ -40,12 +15,7 @@ impl Freezable for StateSink {}
 impl CuSinkTask for StateSink {
     type Resources<'r> = ();
     type Input<'m> = input_msg!(
-        'm,
-        CartesianWaypoint,
-        JointState,
-        JointState,
-        JointState,
-        JointState
+        'm, CartesianWaypoint, JointState, JointState, JointState, JointState
     );
 
     fn new(_config: Option<&ComponentConfig>, _resources: Self::Resources<'_>) -> CuResult<Self>
@@ -54,11 +24,7 @@ impl CuSinkTask for StateSink {
     {
         Ok(Self {
             last: [f32::INFINITY; 4],
-            waypoint: CartesianWaypoint {
-                x: 0.0,
-                y: 0.0,
-                z: 0.0,
-            },
+            waypoint: CartesianWaypoint::default(),
         })
     }
 
@@ -76,7 +42,6 @@ impl CuSinkTask for StateSink {
             j3.payload().map(|s| s.current_angle).unwrap_or(0.0),
         ];
 
-        // Adaptive skip
         let changed = self
             .last
             .iter()
@@ -87,15 +52,16 @@ impl CuSinkTask for StateSink {
         }
         self.last = angles;
 
-        notify(
-            angles[0],
-            angles[1],
-            angles[2],
-            angles[3],
-            self.waypoint.x,
-            self.waypoint.y,
-            self.waypoint.z,
-        );
+        ringbuf::write(ArmState {
+            j0: angles[0],
+            j1: angles[1],
+            j2: angles[2],
+            j3: angles[3],
+            wx: self.waypoint.x,
+            wy: self.waypoint.y,
+            wz: self.waypoint.z,
+        });
+
         Ok(())
     }
 }

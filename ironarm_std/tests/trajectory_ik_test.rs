@@ -1,18 +1,18 @@
 /// Integration test: trajectory → IK for 4-DOF arm.
 use ironarm_core::ik::{EETarget, solve_ik};
 use ironarm_core::motion::ArmGeometry4Dof;
-use ironarm_core::trajectory;
+use ironarm_std::trajectory;
 
 #[test]
 fn test_ik_circle_reachable() {
     let geo = ArmGeometry4Dof {
-        l1: 1.2,
-        l2: 1.0,
-        l2_eff: 1.06,
+        l1: 0.8,
+        l2: 0.7,
+        l2_eff: 0.85,
         shoulder_z: 0.18,
     };
 
-    let traj = trajectory::circle(0.0, 0.0, 1.5, geo.shoulder_z + 0.5, 20.0);
+    let traj = trajectory::circle(0.0, 0.0, 0.8, geo.shoulder_z + 0.5, 5.0);
 
     for tick in [0, 25, 50, 75] {
         let t = tick as f32 * 0.02;

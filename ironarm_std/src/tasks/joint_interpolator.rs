@@ -96,6 +96,13 @@ impl CuTask for JointInterpolator {
             stiffness: 1.0,
         });
 
+        output.metadata.set_status(format!(
+            "j{}: {:.3} rad ({:.0}%)",
+            self.joint_index,
+            self.current_angle,
+            progress * 100.0
+        ));
+
         Ok(())
     }
 }

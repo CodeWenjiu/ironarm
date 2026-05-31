@@ -62,6 +62,11 @@ impl CuTask for IKSolver {
 
         if *wp == self.last_input {
             output.set_payload(self.last_output.clone());
+            output.metadata.set_status(format!(
+                "IK j{}: {:.3} rad (cached)",
+                self.joint_index,
+                self.last_output.angles.first().copied().unwrap_or(0.0)
+            ));
             return Ok(());
         }
         self.last_input = wp.clone();

@@ -1,68 +1,67 @@
-//! Inverse kinematics for a 2-joint arm (MuJoCo Z-up coordinates).
+//! Inverse kinematics for a 4-DOF articulated arm (MuJoCo Z-up coordinates).
 //!
-//! Arm geometry:
-//! - j0: base rotation around Z axis (at shoulder)
-//! - j1: elbow pitch around Y axis (inherits j0 rotation)
-//! - Upper arm length l0 (along +X when j0=0)
-//! - Forearm length l1 (along +X when j1=0)
+//! Joint layout:
+//!   j0 — waist yaw around Z
+//!   j1 — shoulder pitch around Y
+//!   j2 — elbow pitch around Y
+//!   j3 — wrist pitch around Y
 //!
-//! Forward kinematics (derived from MuJoCo):
-//!   r = l0 + l1 * cos(j1)
-//!   z = base_z - l1 * sin(j1)    ← note: positive j1 lowers the arm
-//!
-//! Workspace: torus surface (r - l0)² + (z - base_z)² = l1².
-//! Points not on this surface are unreachable with 2 DOF.
+//! All three pitch joints (j1, j2, j3) form a 3-link planar arm in the
+//! vertical plane.  The solver:
+//!   1. Places the wrist with j1/j2 using standard 2-link IK
+//!   2. Uses j3 to reach from wrist to the target (final L3 link)
 
-use crate::motion::ArmGeometry;
+use crate::motion::ArmGeometry4Dof;
 
-/// End-effector target in Cartesian space (Z-up).
 pub struct EETarget {
     pub x: f32,
     pub y: f32,
     pub z: f32,
 }
 
-/// Solve 2-joint IK.  Returns `(j0, j1)` — base rotation and elevation.
-///
-/// Returns `None` if the target is unreachable (projects to workspace boundary).
-pub fn solve_ik(target: &EETarget, geo: &ArmGeometry) -> Option<(f32, f32)> {
-    let r = f32::hypot(target.x, target.y); // horizontal distance in XY
-    let h = target.z - geo.base_z; // vertical offset from shoulder
+pub fn solve_ik(target: &EETarget, geo: &ArmGeometry4Dof) -> Option<(f32, f32, f32, f32)> {
+    let r = f32::hypot(target.x, target.y);
+    let h = target.z - geo.shoulder_z;
+    let d = f32::hypot(r, h);
 
-    let l0 = geo.l0;
     let l1 = geo.l1;
+    let l2 = geo.l2;
+    let l3 = geo.l2_eff - geo.l2;
 
-    // Workspace constraint: (r - l0)² + h² ≈ l1²
-    let dist_sq = (r - l0) * (r - l0) + h * h;
-    let tol = 0.005; // 5 mm tolerance for numerical stability
+    let max2 = l1 + l2;
+    let min2 = (l1 - l2).abs();
 
-    if (dist_sq - l1 * l1).abs() > tol {
-        // Project to nearest reachable point on the workspace surface.
-        // Scale (r - l0, h) so its magnitude equals l1.
-        let dist = dist_sq.sqrt();
-        if dist < 1e-6 {
-            // Singular: r = l0 and h = 0 → arm is at the center of workspace
-            // Return a default pose (arm pointing down).
-            let j0 = target.y.atan2(target.x);
-            return Some((j0, core::f32::consts::PI / 2.0));
-        }
-        let scale = l1 / dist;
-        let dr = (r - l0) * scale;
-        let dh = h * scale;
-        let j0 = target.y.atan2(target.x);
-        // j1: atan2(-dh, dr) — see derivation below
-        let j1 = (-dh).atan2(dr);
-        return Some((j0, j1));
+    if d > l1 + l2 + l3 + 1e-5 || d < (l1 - l2 - l3).abs() - 1e-5 {
+        return None;
     }
+
+    // Place wrist along shoulder→target line, L3 back from target
+    let dw = if d > l3 {
+        (d - l3).clamp(min2, max2)
+    } else {
+        min2
+    };
+    let wr = if d > 1e-6 { r * dw / d } else { 0.0 };
+    let wh = if d > 1e-6 { h * dw / d } else { 0.0 };
+
+    // 2-link IK for wrist position
+    let dw_sq = wr * wr + wh * wh;
+    let cos_a = (l1 * l1 + l2 * l2 - dw_sq) / (2.0 * l1 * l2);
+    let cos_a = cos_a.clamp(-1.0, 1.0);
+    let alpha = cos_a.acos();
+    let j2 = core::f32::consts::PI - alpha;
+
+    let a = l1 + l2 * j2.cos();
+    let b = l2 * j2.sin();
+    let j1 = (-wh).atan2(wr) - b.atan2(a);
+
+    // j3: wrist→target angle relative to forearm
+    let to_target = (-(h - wh)).atan2(r - wr);
+    let j3 = to_target - (j1 + j2);
 
     let j0 = target.y.atan2(target.x);
 
-    // From FK: r = l0 + l1*cos(j1), h = -l1*sin(j1)
-    // => cos(j1) = (r - l0)/l1, sin(j1) = -h/l1
-    // => j1 = atan2(-h, r - l0)
-    let j1 = (-h).atan2(r - l0);
-
-    Some((j0, j1))
+    Some((j0, j1, j2, j3))
 }
 
 #[cfg(test)]
@@ -70,86 +69,41 @@ mod tests {
     use super::*;
 
     fn near(a: f32, b: f32) -> bool {
-        (a - b).abs() < 0.01
+        (a - b).abs() < 0.02
+    }
+
+    fn geo() -> ArmGeometry4Dof {
+        ArmGeometry4Dof {
+            l1: 0.8,
+            l2: 0.7,
+            l2_eff: 0.85,
+            shoulder_z: 0.18,
+        }
     }
 
     #[test]
-    fn test_ik_reachable() {
-        let geo = ArmGeometry {
-            l0: 1.0,
-            l1: 2.0,
-            base_z: 0.15,
-        };
-
-        // Point on the workspace surface: r = l0 + l1*cos(j1), z = base_z - l1*sin(j1)
-        // For j1 = -1.0 rad: r = 1 + 2*cos(-1) ≈ 2.0806, z = 0.15 - 2*sin(-1) ≈ 1.833
+    fn test_all_zero() {
         let t = EETarget {
-            x: 2.0806,
+            x: 1.65,
             y: 0.0,
-            z: 1.8329,
+            z: 0.18,
         };
-        let (j0, j1) = solve_ik(&t, &geo).expect("reachable");
+        let (j0, j1, j2, j3) = solve_ik(&t, &geo()).unwrap();
         assert!(near(j0, 0.0));
-        assert!(near(j1, -1.0));
+        assert!(near(j1, 0.0));
+        assert!(near(j2, 0.0));
+        assert!(near(j3, 0.0));
     }
 
     #[test]
-    fn test_ik_with_rotation() {
-        let geo = ArmGeometry {
-            l0: 1.0,
-            l1: 2.0,
-            base_z: 0.15,
-        };
-        // Point at 90° in XY plane, j1 = -0.5
-        let j1_exp = -0.5f32;
-        let r = 1.0 + 2.0 * j1_exp.cos();
-        let z = 0.15 - 2.0 * j1_exp.sin();
-        let t = EETarget { x: 0.0, y: r, z };
-        let (j0, j1) = solve_ik(&t, &geo).expect("reachable");
-        assert!(near(j0, core::f32::consts::FRAC_PI_2));
-        assert!(near(j1, j1_exp));
-    }
-
-    #[test]
-    fn test_ik_project_unreachable() {
-        let geo = ArmGeometry {
-            l0: 1.0,
-            l1: 2.0,
-            base_z: 0.15,
-        };
-        // A point inside the workspace that cannot be exactly reached
+    fn test_j3_bends() {
         let t = EETarget {
-            x: 1.2,
+            x: 1.0,
             y: 0.0,
-            z: 0.65,
+            z: 0.68,
         };
-        // Should still return a solution (projected)
-        let (j0, j1) = solve_ik(&t, &geo).expect("should project");
-        assert!(j0.is_finite());
-        assert!(j1.is_finite());
-        // Verify the resulting pose is approximately on the workspace
-        let r_actual = 1.0 + 2.0 * j1.cos();
-        let z_actual = 0.15 - 2.0 * j1.sin();
-        let err = ((r_actual - 1.0) * (r_actual - 1.0) + (z_actual - 0.15) * (z_actual - 0.15)
-            - 4.0)
-            .abs();
-        assert!(err < 0.01, "projected pose not on workspace: err={err}");
-    }
-
-    #[test]
-    fn test_ik_unreachable() {
-        let geo = ArmGeometry {
-            l0: 0.5,
-            l1: 0.5,
-            base_z: 0.15,
-        };
-        let t = EETarget {
-            x: 10.0,
-            y: 0.0,
-            z: 10.0,
-        };
-        // Still reachable since we project...
-        let result = solve_ik(&t, &geo);
-        assert!(result.is_some());
+        let (_, _, j2, j3) = solve_ik(&t, &geo()).unwrap();
+        assert!(j2.abs() > 0.1);
+        assert!(j3.abs() > 0.01);
     }
 }

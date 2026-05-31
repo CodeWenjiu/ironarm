@@ -170,16 +170,24 @@ fn sample_waypoints(
 // Old compatibility helpers (keep circle_waypoint as a thin wrapper)
 // ---------------------------------------------------------------------------
 
-use crate::motion::ArmGeometry;
+use crate::motion::ArmGeometry4Dof;
 
 /// Compute joint angles for the circular trajectory at time *t*.
-pub fn compute_circle_angles(t: f32, l0: f32, l1: f32, base_z: f32) -> Option<(f32, f32)> {
-    let geo = ArmGeometry { l0, l1, base_z };
-    // Use reachable parameters: (r - l0)² + h² = l1²
-    // For h = 0.5 (z = base_z + 0.5): r = l0 + sqrt(l1² - h²) ≈ 2.936
+pub fn compute_circle_angles(
+    t: f32,
+    l1: f32,
+    l2_eff: f32,
+    shoulder_z: f32,
+) -> Option<(f32, f32, f32, f32)> {
+    let geo = ArmGeometry4Dof {
+        l1,
+        l2: l2_eff - 0.06, // approximate L2
+        l2_eff,
+        shoulder_z,
+    };
     let h = 0.5f32;
-    let r = l0 + (l1 * l1 - h * h).sqrt();
-    let z = base_z + h;
+    let r = l1 + (l2_eff * l2_eff - h * h).sqrt();
+    let z = shoulder_z + h;
     let wp = circle(0.0, 0.0, r, z, 20.0).sample(t);
     crate::ik::solve_ik(
         &crate::ik::EETarget {

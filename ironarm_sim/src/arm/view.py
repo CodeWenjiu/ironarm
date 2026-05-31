@@ -100,24 +100,37 @@ class Arm3DView(QOpenGLWidget):
         self.doneCurrent()
 
     # ------------------------------------------------------------------
-    # Simulation
+    # Simulation (4-DOF arm: j0..j3)
     # ------------------------------------------------------------------
 
     def _tick(self) -> None:
         self._apply_reload_if_needed()
         if self._data is None:
             return
-        j0, j1, wx, wy, wz = getattr(self, "_angles", (0.0, 0.0, 0.0, 0.0, 0.65))
+        j0, j1, j2, j3, wx, wy, wz = getattr(
+            self, "_angles", (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0)
+        )
         self._data.joint("j0").qpos[0] = j0
         self._data.joint("j1").qpos[0] = j1
+        self._data.joint("j2").qpos[0] = j2
+        self._data.joint("j3").qpos[0] = j3
         bid = self._model.body("target").id
         jid = self._model.body_jntadr[bid]
         self._data.qpos[jid : jid + 3] = (wx, wy, wz)
         mujoco.mj_forward(self._model, self._data)
         self.update()
 
-    def _on_angles(self, j0: float, j1: float, wx: float, wy: float, wz: float) -> None:
-        self._angles = (j0, j1, wx, wy, wz)
+    def _on_angles(
+        self,
+        j0: float,
+        j1: float,
+        j2: float,
+        j3: float,
+        wx: float,
+        wy: float,
+        wz: float,
+    ) -> None:
+        self._angles = (j0, j1, j2, j3, wx, wy, wz)
 
     # ------------------------------------------------------------------
     # OpenGL
@@ -151,7 +164,7 @@ class Arm3DView(QOpenGLWidget):
         mujoco.mjr_render(mujoco.MjrRect(0, 0, w, h), self._scene, self._context)
 
     def _update_camera(self) -> None:
-        self._cam.lookat[:] = (0.7, 0.0, 0.3)
+        self._cam.lookat[:] = (1.0, 0.0, 0.8)
         self._cam.distance = self._distance
         self._cam.azimuth = self._azimuth
         self._cam.elevation = -self._elevation

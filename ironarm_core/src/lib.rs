@@ -6,7 +6,6 @@ pub mod ik;
 pub mod math;
 pub mod messages;
 pub mod motion;
-pub mod state;
 pub mod trajectory;
 
 #[cfg(feature = "std")]

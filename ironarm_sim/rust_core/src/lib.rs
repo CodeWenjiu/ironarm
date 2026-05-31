@@ -31,14 +31,16 @@ fn start_copper() {
     ensure_copper();
 }
 
-/// Python: register a callback that copper will call with (j0, j1) each cycle.
+/// Python: register a callback that copper will call with (j0, j1, wx, wy, wz) each cycle.
 #[pyo3::pyfunction]
 fn register_callback(cb: PyObject) {
-    ironarm_core::state::set_callback(Box::new(move |j0: f32, j1: f32, wx: f32, wy: f32, wz: f32| {
-        Python::with_gil(|py| {
-            let _ = cb.call1(py, (j0, j1, wx, wy, wz));
-        });
-    }));
+    ironarm_std::tasks::state_sink::set_callback(Box::new(
+        move |j0: f32, j1: f32, wx: f32, wy: f32, wz: f32| {
+            Python::with_gil(|py| {
+                let _ = cb.call1(py, (j0, j1, wx, wy, wz));
+            });
+        },
+    ));
 }
 
 #[pyo3::pymodule]

@@ -108,11 +108,11 @@ class Arm3DView(QOpenGLWidget):
         if self._data is None:
             return
         j0, j1, wx, wy, wz = getattr(self, "_angles", (0.0, 0.0, 0.0, 0.0, 0.65))
-        bid = self._model.body("target").id
-        jid = self._model.body_jntadr[bid]
-        self._data.qpos[jid:jid+3] = (wx, wy, wz)
         self._data.joint("j0").qpos[0] = j0
         self._data.joint("j1").qpos[0] = j1
+        bid = self._model.body("target").id
+        jid = self._model.body_jntadr[bid]
+        self._data.qpos[jid : jid + 3] = (wx, wy, wz)
         mujoco.mj_forward(self._model, self._data)
         self.update()
 

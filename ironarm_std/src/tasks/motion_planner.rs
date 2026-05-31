@@ -147,7 +147,6 @@ impl CuSrcTask for MotionPlanner {
 
         let wp = self.last_wp.clone();
         output.set_payload(wp.clone());
-        ironarm_core::state::set_waypoint(wp.x, wp.y, wp.z);
 
         output.metadata.set_status(format!(
             "WP@{}Hz: ({:.2}, {:.2}, {:.2}) t={t:.1}s",

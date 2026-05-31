@@ -65,12 +65,13 @@
         ),
         (
             id: "state_sink",
-            type: "ironarm_core::tasks::StateSink",
+            type: "tasks::StateSink",
         ),
     ],
     cnx: [
         (src: "motion", dst: "ik_0", msg: "ironarm_core::messages::CartesianWaypoint"),
         (src: "motion", dst: "ik_1", msg: "ironarm_core::messages::CartesianWaypoint"),
+        (src: "motion", dst: "state_sink", msg: "ironarm_core::messages::CartesianWaypoint"),
         (src: "ik_0", dst: "interp_0", msg: "ironarm_core::messages::JointWaypoint"),
         (src: "ik_1", dst: "interp_1", msg: "ironarm_core::messages::JointWaypoint"),
         (src: "interp_0", dst: "joint_0", msg: "ironarm_core::messages::JointCommand"),

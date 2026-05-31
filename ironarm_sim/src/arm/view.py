@@ -107,14 +107,17 @@ class Arm3DView(QOpenGLWidget):
         self._apply_reload_if_needed()
         if self._data is None:
             return
-        j0, j1 = getattr(self, "_angles", (0.0, 0.0))
+        j0, j1, wx, wy, wz = getattr(self, "_angles", (0.0, 0.0, 0.0, 0.0, 0.65))
+        bid = self._model.body("target").id
+        jid = self._model.body_jntadr[bid]
+        self._data.qpos[jid:jid+3] = (wx, wy, wz)
         self._data.joint("j0").qpos[0] = j0
-        self._data.joint("j1").qpos[0] = -j1
+        self._data.joint("j1").qpos[0] = j1
         mujoco.mj_forward(self._model, self._data)
         self.update()
 
-    def _on_angles(self, j0: float, j1: float) -> None:
-        self._angles = (j0, j1)
+    def _on_angles(self, j0: float, j1: float, wx: float, wy: float, wz: float) -> None:
+        self._angles = (j0, j1, wx, wy, wz)
 
     # ------------------------------------------------------------------
     # OpenGL

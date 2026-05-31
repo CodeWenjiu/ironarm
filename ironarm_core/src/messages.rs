@@ -27,7 +27,7 @@ pub struct JointState {
 // ---------------------------------------------------------------------------
 
 /// Motion planner → IK solver: a target in Cartesian space.
-#[derive(Debug, Clone, Encode, Decode, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Encode, Decode, Serialize, Deserialize)]
 #[cfg_attr(feature = "std", derive(Default, cu29_traits::Reflect))]
 pub struct CartesianWaypoint {
     pub x: f32,

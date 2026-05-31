@@ -4,9 +4,12 @@
             id: "motion",
             type: "tasks::MotionPlanner",
             config: {
+                "type": "circle",
                 "l0": 1.0,
                 "l1": 2.0,
                 "base_z": 0.15,
+                "radius": 2.936,
+                "height": 0.5,
                 "period": 20.0,
             },
         ),
@@ -18,7 +21,6 @@
                 "l0": 1.0,
                 "l1": 2.0,
                 "base_z": 0.15,
-                "period": 20.0,
             },
         ),
         (
@@ -29,23 +31,22 @@
                 "l0": 1.0,
                 "l1": 2.0,
                 "base_z": 0.15,
-                "period": 20.0,
             },
         ),
         (
             id: "interp_0",
-            type: "ironarm_core::tasks::JointInterpolator",
+            type: "tasks::JointInterpolator",
             config: {
                 "joint_index": 0,
-                "smoothing": 0.3,
+                "transition_ms": 100.0,
             },
         ),
         (
             id: "interp_1",
-            type: "ironarm_core::tasks::JointInterpolator",
+            type: "tasks::JointInterpolator",
             config: {
                 "joint_index": 1,
-                "smoothing": 0.3,
+                "transition_ms": 100.0,
             },
         ),
         (

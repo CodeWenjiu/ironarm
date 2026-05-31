@@ -40,6 +40,7 @@
 
     <!-- Target marker -->
     <body name="target" pos="1.2 0 0.65">
+      <freejoint/>
       <geom type="sphere" size="0.05" rgba="0.9 0.3 0.3 0.5"/>
     </body>
   </worldbody>

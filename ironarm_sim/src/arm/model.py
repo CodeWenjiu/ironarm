@@ -7,16 +7,24 @@ import os
 # MJCF model path
 # ---------------------------------------------------------------------------
 
-_MODEL_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "models")
-MODEL_PATH = os.path.join(_MODEL_DIR, "ironarm.xml")
+MODEL_PATH = os.path.join(
+    os.path.dirname(__file__), "..", "..", "..", "ironarm_model", "ironarm.xml"
+)
 
 
 # ---------------------------------------------------------------------------
 # Trajectory (used for target marker — IK is done in Rust)
 # ---------------------------------------------------------------------------
 
-def trajectory(t: float, base_z: float) -> tuple[float, float, float]:
 
-    """Circular trajectory in MuJoCo Z-up coordinates."""
-    phase = t * 2.0 * math.pi / 5.0
-    return (1.2 * math.cos(phase), 1.2 * math.sin(phase), base_z + 0.5)
+def trajectory(t: float, base_z: float) -> tuple[float, float, float]:
+    """Circular trajectory in MuJoCo Z-up coordinates.
+
+    Uses workspace-reachable parameters:
+    (r - l0)² + (z - base_z)² = l1² where l0=1, l1=2.
+    For z = base_z + 0.5: r ≈ 2.936.
+    """
+    r = 2.936
+    z = base_z + 0.5
+    phase = t * 2.0 * math.pi / 20.0
+    return (r * math.cos(phase), r * math.sin(phase), z)

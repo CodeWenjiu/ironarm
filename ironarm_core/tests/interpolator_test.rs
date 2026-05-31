@@ -2,7 +2,8 @@
 /// without the copper runtime — directly tests the functions that process() calls.
 use ironarm_core::ik::{EETarget, solve_ik};
 use ironarm_core::math::interpolate;
-use ironarm_core::motion::{ArmGeometry, circle_waypoint};
+use ironarm_core::motion::ArmGeometry;
+use ironarm_core::trajectory;
 
 #[test]
 fn test_both_joints_produce_nonzero_angles() {
@@ -12,6 +13,8 @@ fn test_both_joints_produce_nonzero_angles() {
         base_z: 0.15,
     };
 
+    let traj = trajectory::circle(0.0, 0.0, 1.2, geo.base_z + 0.5, 20.0);
+
     // Simulate 100 ticks (2 seconds at 50 Hz).
     let mut j0_current = 0.0f32;
     let mut j1_current = 0.0f32;
@@ -19,7 +22,7 @@ fn test_both_joints_produce_nonzero_angles() {
 
     for tick in 1..=100 {
         let t = tick as f32 * 0.02;
-        let wp = circle_waypoint(t, &geo, 20.0);
+        let wp = traj.sample(t);
         let target = EETarget {
             x: wp.x,
             y: wp.y,
@@ -51,10 +54,12 @@ fn test_ik_at_various_points() {
         base_z: 0.15,
     };
 
+    let traj = trajectory::circle(0.0, 0.0, 1.2, geo.base_z + 0.5, 20.0);
+
     // Check several points on the trajectory.
     for tick in [0, 25, 50, 75] {
         let t = tick as f32 * 0.02;
-        let wp = circle_waypoint(t, &geo, 20.0);
+        let wp = traj.sample(t);
         let target = EETarget {
             x: wp.x,
             y: wp.y,

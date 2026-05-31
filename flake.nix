@@ -37,6 +37,7 @@
           rust-toolchain
           pkgs.stdenv.cc
           pkgs.uv
+          pkgs.python313
         ];
 
         buildDeps = with pkgs; [

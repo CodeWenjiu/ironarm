@@ -1453,6 +1453,7 @@ dependencies = [
  "cu-bincode",
  "cu29",
  "cu29-traits",
+ "ironarm_model",
  "serde",
  "serde_json",
 ]

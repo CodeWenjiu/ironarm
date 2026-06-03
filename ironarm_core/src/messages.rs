@@ -2,10 +2,10 @@ use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
 // ---------------------------------------------------------------------------
-// Joint-level messages
+// 关节级消息
 // ---------------------------------------------------------------------------
 
-/// Task → joint driver: target pose for a single joint.
+/// 任务 → 关节驱动器：单个关节的目标位姿。
 #[derive(Debug, Clone, Encode, Decode, Serialize, Deserialize)]
 #[cfg_attr(feature = "std", derive(cu29_traits::Reflect))]
 pub struct JointCommand {
@@ -14,7 +14,7 @@ pub struct JointCommand {
     pub stiffness: f32,
 }
 
-/// Joint driver → monitor: current joint state.
+/// 关节驱动器 → 监视器：当前关节状态。
 #[derive(Debug, Clone, Encode, Decode, Serialize, Deserialize)]
 #[cfg_attr(feature = "std", derive(cu29_traits::Reflect))]
 pub struct JointState {
@@ -23,11 +23,11 @@ pub struct JointState {
 }
 
 // ---------------------------------------------------------------------------
-// Pipeline messages (motion → IK → interpolation → joints)
+// 流水线消息（运动规划 → IK → 插值 → 关节）
 // ---------------------------------------------------------------------------
 
-/// Motion planner → IK solver: a target in Cartesian space.
-#[derive(Debug, Clone, PartialEq, Encode, Decode, Serialize, Deserialize)]
+/// 运动规划器 → IK 求解器：笛卡尔空间中的目标点。
+#[derive(Debug, Clone, Copy, PartialEq, Encode, Decode, Serialize, Deserialize)]
 #[cfg_attr(feature = "std", derive(Default, cu29_traits::Reflect))]
 pub struct CartesianWaypoint {
     pub x: f32,
@@ -35,15 +35,32 @@ pub struct CartesianWaypoint {
     pub z: f32,
 }
 
-/// IK solver → interpolator: raw joint angles for all joints.
-#[derive(Debug, Clone, Default, Encode, Decode, Serialize, Deserialize)]
+/// IK 求解器 → 插值器 / 状态收集器。
+///
+/// 包含全部关节的目标角度以及原始的目标位置，
+/// 下游各取所需：Interpolator 取 angles[i]，StateSink 取 target。
+#[derive(Debug, Clone, Copy, Encode, Decode, Serialize, Deserialize)]
 #[cfg_attr(feature = "std", derive(cu29_traits::Reflect))]
 pub struct JointWaypoint {
-    pub angles: alloc::vec::Vec<f32>,
+    pub target: CartesianWaypoint,
+    pub angles: [f32; ironarm_model::N_JOINTS],
+}
+
+impl Default for JointWaypoint {
+    fn default() -> Self {
+        Self {
+            target: CartesianWaypoint {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            angles: [0.0; ironarm_model::N_JOINTS],
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
-// Defaults (custom — stiffness defaults to 1.0)
+// 默认实现
 // ---------------------------------------------------------------------------
 
 impl Default for JointCommand {

@@ -1,3 +1,5 @@
-//! Arm model parameters — auto-generated from ironarm.xml at build time.
+//! Arm model parameters — auto-generated from ur5e.xml at build time.
 
-include!(concat!(env!("OUT_DIR"), "/model_params.rs"));
+#![no_std]
+
+include!(concat!(env!("OUT_DIR"), "/poe_params.rs"));

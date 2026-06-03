@@ -1,22 +1,88 @@
-use crate::ik_geo::{self, LinkOffsets, ScrewAxes};
-use crate::messages::{CartesianWaypoint, JointWaypoint};
-use alloc::format;
-use alloc::vec;
+use core::f32::consts::PI;
 use cu29::prelude::*;
 
-/// Receives Cartesian waypoints, outputs 6-DOF joint-angle waypoints using IK-Geo.
-///
-/// Configured by `joint_index` (0..5) to select which joint angle to emit.
-/// All instances compute the full 6-DOF solution internally.
-#[derive(Reflect)]
-pub struct IKSolver {
-    joint_index: usize,
-    #[reflect(ignore)]
-    h: ScrewAxes,
-    #[reflect(ignore)]
-    p: LinkOffsets,
+use crate::ik_geo::{self, LinkOffsets, ScrewAxes};
+use crate::messages::{CartesianWaypoint, JointWaypoint};
+
+// ---------------------------------------------------------------------------
+// IK 缓存：避免重复计算 + 相位解绕
+// ---------------------------------------------------------------------------
+
+impl Default for IkCache {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+struct IkCache {
     last_input: CartesianWaypoint,
     last_output: JointWaypoint,
+}
+
+impl IkCache {
+    fn new() -> Self {
+        Self {
+            last_input: CartesianWaypoint {
+                x: f32::NAN,
+                y: f32::NAN,
+                z: f32::NAN,
+            },
+            last_output: JointWaypoint::default(),
+        }
+    }
+
+    /// 若输入路径点未变化，直接返回缓存的结果。
+    /// 否则记录新输入，返回 None 要求调用方重新计算。
+    fn get_or_none(&mut self, wp: &CartesianWaypoint) -> Option<&JointWaypoint> {
+        if *wp == self.last_input {
+            return Some(&self.last_output);
+        }
+        self.last_input = *wp;
+        None
+    }
+
+    /// 存储新的 IK 结果，同时对全部关节做相位解绕。
+    fn update(&mut self, wp: &CartesianWaypoint, raw: &mut [f32; ironarm_model::N_JOINTS]) {
+        for i in 0..ironarm_model::N_JOINTS {
+            let prev = self.last_output.angles[i];
+            while raw[i] - prev > PI {
+                raw[i] -= 2.0 * PI;
+            }
+            while raw[i] - prev < -PI {
+                raw[i] += 2.0 * PI;
+            }
+        }
+        self.last_output = JointWaypoint {
+            target: *wp,
+            angles: *raw,
+        };
+    }
+}
+
+/// 纯位置 IK 时使用的单位旋转矩阵（不关心末端姿态）。
+const ID_ROT: [f32; 9] = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0];
+
+// ---------------------------------------------------------------------------
+// IKSolver — Copper 任务
+// ---------------------------------------------------------------------------
+
+/// 接收笛卡尔路径点，输出全部关节的目标角度。
+///
+/// 只计算一次逆运动学，通过 Copper fan-out 将同一个结果广播给
+/// 各 JointInterpolator 实例，各自按 joint_index 取自己的关节角。
+///
+/// 关节数量由 ironarm_model 在编译期从 XML 自动确定。
+#[derive(Reflect)]
+pub struct IKSolver {
+    /// 关节螺旋轴（编译期从 ur5e.xml 生成）。
+    #[reflect(ignore)]
+    h: ScrewAxes,
+    /// 连杆偏移（同上）。
+    #[reflect(ignore)]
+    p: LinkOffsets,
+    /// 本地缓存（去重 + 相位解绕）。
+    #[reflect(ignore)]
+    cache: IkCache,
 }
 
 impl Freezable for IKSolver {}
@@ -30,38 +96,12 @@ impl CuTask for IKSolver {
     where
         Self: Sized,
     {
-        let cfg = config.unwrap_or_else(|| panic!("IKSolver requires config"));
-        let joint_index = cfg.get::<u64>("joint_index").ok().flatten().unwrap_or(0) as usize;
-
-        // UR5e PoE parameters extracted from MuJoCo model
-        let h: ScrewAxes = [
-            [0.0, 0.0, 1.0],
-            [0.0, -1.0, 0.0],
-            [0.0, -1.0, 0.0],
-            [0.0, -1.0, 0.0],
-            [0.0, 0.0, -1.0],
-            [0.0, -1.0, 0.0],
-        ];
-        let p: LinkOffsets = [
-            [0.0, 0.0, 0.163],
-            [0.0, -0.138, 0.0],
-            [-0.425, 0.131, 0.0],
-            [-0.392, 0.0, 0.0],
-            [0.0, -0.127, 0.0],
-            [0.0, 0.0, -0.100],
-            [0.0, -0.100, 0.0],
-        ];
+        let _cfg = config;
 
         Ok(Self {
-            joint_index,
-            h,
-            p,
-            last_input: CartesianWaypoint {
-                x: f32::NAN,
-                y: f32::NAN,
-                z: f32::NAN,
-            },
-            last_output: JointWaypoint::default(),
+            h: ironarm_model::SCREW_AXES,
+            p: ironarm_model::LINK_OFFSETS,
+            cache: IkCache::new(),
         })
     }
 
@@ -73,46 +113,24 @@ impl CuTask for IKSolver {
     ) -> CuResult<()> {
         let wp = input
             .payload()
-            .ok_or_else(|| CuError::from("IKSolver: no waypoint"))?;
+            .ok_or_else(|| CuError::from("IKSolver: 无路径点"))?;
 
-        if *wp == self.last_input {
-            output.set_payload(self.last_output.clone());
+        // 命中缓存则直接返回
+        if let Some(cached) = self.cache.get_or_none(wp) {
+            output.set_payload(*cached);
             return Ok(());
         }
-        self.last_input = wp.clone();
 
-        // Position-only IK: identity orientation
-        let r_target = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0];
         let p_target = [wp.x, wp.y, wp.z];
-
-        let sols = ik_geo::solve_3p2i(&r_target, &p_target, &self.h, &self.p);
-
-        // Pick first solution where all joints are within UR5e limits (±2π for most)
-        let angles: [f32; 6] = sols
+        let sols = ik_geo::solve_3p2i(&ID_ROT, &p_target, &self.h, &self.p);
+        let mut raw: [f32; ironarm_model::N_JOINTS] = sols
             .iter()
             .find(|s| s.iter().all(|a| a.is_finite()))
             .copied()
-            .unwrap_or([0.0; 6]);
+            .unwrap_or([0.0; ironarm_model::N_JOINTS]);
 
-        // Phase unwrap for this specific joint
-        let raw = angles.get(self.joint_index).copied().unwrap_or(0.0);
-        let prev = self.last_output.angles.first().copied().unwrap_or(raw);
-        let mut angle = raw;
-        while angle - prev > core::f32::consts::PI {
-            angle -= 2.0 * core::f32::consts::PI;
-        }
-        while angle - prev < -core::f32::consts::PI {
-            angle += 2.0 * core::f32::consts::PI;
-        }
-
-        self.last_output = JointWaypoint {
-            angles: vec![angle],
-        };
-        output.set_payload(self.last_output.clone());
-
-        output
-            .metadata
-            .set_status(format!("IK j{}: {:.3} rad", self.joint_index, angle));
+        self.cache.update(wp, &mut raw);
+        output.set_payload(self.cache.last_output.clone());
         Ok(())
     }
 }

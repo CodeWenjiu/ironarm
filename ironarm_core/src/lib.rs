@@ -1,10 +1,7 @@
 #![no_std]
 
-extern crate alloc;
-
-pub mod math;
 pub mod messages;
 
+pub mod ik_geo;
 #[cfg(feature = "std")]
 pub mod tasks;
-pub mod ik_geo;

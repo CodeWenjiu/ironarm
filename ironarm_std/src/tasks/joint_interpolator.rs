@@ -69,13 +69,12 @@ impl CuTask for JointInterpolator {
     ) -> CuResult<()> {
         // Detect a new target angle → start a new timed transition.
         if let Some(wp) = input.payload() {
-            if let Some(&new_target) = wp.angles.first() {
-                let changed = (self.target_angle - new_target).abs() > f32::EPSILON;
-                if changed {
-                    self.start_angle = self.current_angle;
-                    self.target_angle = new_target;
-                    self.transition_start = ctx.now();
-                }
+            let new_target = wp.angles[self.joint_index];
+            let changed = (self.target_angle - new_target).abs() > f32::EPSILON;
+            if changed {
+                self.start_angle = self.current_angle;
+                self.target_angle = new_target;
+                self.transition_start = ctx.now();
             }
         }
 

@@ -18,7 +18,7 @@ from PySide6.QtOpenGLWidgets import QOpenGLWidget
 from .model import JOINT_NAMES, MODEL_PATH
 
 # 轨迹最大点数
-TRAIL_LEN = 30  # 1 秒 @ ~60fps
+TRAIL_LEN = 20  # 0.5 秒 @ ~60fps
 
 
 class Arm3DView(QOpenGLWidget):

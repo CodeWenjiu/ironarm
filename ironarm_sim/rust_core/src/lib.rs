@@ -55,8 +55,9 @@ fn join_copper(timeout_secs: f64) -> bool {
 }
 
 #[pyo3::pyfunction]
-fn poll_state() -> Option<(f32, f32, f32, f32, f32, f32, f32, f32, f32)> {
-    ironarm_std::ringbuf::read().map(|s| (s.j0, s.j1, s.j2, s.j3, s.j4, s.j5, s.wx, s.wy, s.wz))
+fn poll_state() -> (f32, f32, f32, f32, f32, f32, f32, f32, f32) {
+    let s = ironarm_std::shared_state::read();
+    (s.j0, s.j1, s.j2, s.j3, s.j4, s.j5, s.wx, s.wy, s.wz)
 }
 
 #[pyo3::pymodule]

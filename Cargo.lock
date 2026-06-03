@@ -1489,7 +1489,6 @@ dependencies = [
 name = "ironarm_sim"
 version = "0.1.0"
 dependencies = [
- "ironarm_core",
  "ironarm_std",
  "pyo3",
 ]
@@ -1501,6 +1500,7 @@ dependencies = [
  "cu-consolemon",
  "cu29",
  "ironarm_core",
+ "triple_buffer",
 ]
 
 [[package]]
@@ -2996,6 +2996,15 @@ dependencies = [
  "sharded-slab",
  "thread_local",
  "tracing-core",
+]
+
+[[package]]
+name = "triple_buffer"
+version = "7.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "316e1ab00252ce5980b8a70eb50f9818f47a20d341394c56ffab88e764b3caed"
+dependencies = [
+ "crossbeam-utils",
 ]
 
 [[package]]

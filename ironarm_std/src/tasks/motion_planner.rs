@@ -1,19 +1,17 @@
-use crate::trajectory::{self, Trajectory};
-use cu29::prelude::*;
-use ironarm_core::messages::CartesianWaypoint;
-use std::time::Instant;
+//! 运动规划器——按可配置轨迹生成笛卡尔路径点。
+//!
+//! 配置键（在 copperconfig.ron 中）：
+//! - `"type"`: `"circle"` | `"tilted_circle"` | `"linear"`
+//! - `"wp_rate_hz"`: 路径点输出频率（默认 10）
 
-/// Generates Cartesian waypoints using a configurable trajectory.
-///
-/// Config keys:
-/// - `"type"`: `"circle"`, `"tilted_circle"`, or `"linear"`
-/// - Circle: `"radius"`, `"height"`, `"period"`, `"shoulder_z"`
-/// - TiltedCircle: `"cx"`,`"cy"`,`"cz"`,`"nx"`,`"ny"`,`"nz"`,`"r"`,`"period"`
-/// - Linear: `"start_x"`..`"end_z"`, `"duration"`
-/// - `"wp_rate_hz"`: waypoint rate (default 10)
+use cu29::prelude::*;
+use ironarm_core::clock;
+use ironarm_core::messages::CartesianWaypoint;
+use ironarm_core::trajectory::{self, Trajectory};
+
 #[derive(Reflect)]
 pub struct MotionPlanner {
-    start: Instant,
+    start: f32,
     #[reflect(ignore)]
     traj: Trajectory,
     wp_interval: f32,
@@ -31,7 +29,7 @@ impl CuSrcTask for MotionPlanner {
     where
         Self: Sized,
     {
-        let cfg = config.unwrap_or_else(|| panic!("MotionPlanner requires config"));
+        let cfg = config.unwrap_or_else(|| panic!("MotionPlanner 需要 config"));
         let traj_type = cfg
             .get::<String>("type")
             .ok()
@@ -87,27 +85,29 @@ impl CuSrcTask for MotionPlanner {
         } else {
             0.0
         };
-        let last_wp = traj.sample(0.0);
+
+        let first_wp = traj.sample(0.0);
+        let now = clock::now_secs();
 
         Ok(Self {
-            start: Instant::now(),
+            start: now,
             traj,
             wp_interval,
-            last_wp_time: -wp_interval,
-            last_wp,
+            last_wp_time: now - wp_interval, // 首次立即输出
+            last_wp: first_wp,
         })
     }
 
     fn process(&mut self, _ctx: &CuContext, output: &mut Self::Output<'_>) -> CuResult<()> {
-        let t = self.start.elapsed().as_secs_f32();
+        let t = clock::now_secs() - self.start;
 
         if t - self.last_wp_time >= self.wp_interval {
             self.last_wp = self.traj.sample(t);
             self.last_wp_time = t;
         }
 
-        let wp = self.last_wp.clone();
-        output.set_payload(wp.clone());
+        let wp = self.last_wp;
+        output.set_payload(wp);
 
         output.metadata.set_status(format!(
             "WP@{}Hz: ({:.2},{:.2},{:.2}) t={t:.1}s",

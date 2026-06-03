@@ -13,3 +13,4 @@ path = "src/lib.rs"
 ironarm_core = { path = "../ironarm_core" }
 cu29 = { workspace = true }
 cu-consolemon = { workspace = true }
+triple_buffer = "7"

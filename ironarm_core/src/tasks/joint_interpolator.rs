@@ -1,36 +1,32 @@
-use cu29::prelude::*;
-use ironarm_core::messages::{JointCommand, JointWaypoint};
+//! 关节插值器——接收完整 IK 结果，对单个关节做时间平滑插值。
+//!
+//! 使用线性插值，在可配置的 `transition_ms` 时长内平滑过渡。
+//! 时间源通过 `ironarm_core::clock::set_clock()` 在启动时注入。
+//!
+//! 配置键：
+//! - `"joint_index"` (u64): 本实例驱动哪个关节
+//! - `"transition_ms"` (f64): 过渡时长，毫秒（默认 100）
 
-/// Receives joint-angle waypoints, outputs time-based smooth joint commands.
-///
-/// Uses linear interpolation over a configurable real-time duration.
-/// Regardless of how slowly waypoints arrive (e.g. 10 Hz), the joint
-/// always takes `transition_ms` to move between targets, producing a
-/// genuinely smooth trajectory at the DAG's native tick rate.
-///
-/// Lives in `ironarm_std` because time-aware interpolation requires
-/// `ctx.now()` — core remains `no_std`, time-free.
-///
-/// Config keys:
-/// - `"joint_index"` (u64): which joint this instance drives
-/// - `"transition_ms"` (f64): move duration in milliseconds (default 100)
+use crate::clock;
+use crate::messages::{JointCommand, JointWaypoint};
+use alloc::format;
+use cu29::prelude::*;
+
 #[derive(Reflect)]
 pub struct JointInterpolator {
     joint_index: usize,
 
-    /// Current interpolated angle (output every tick).
+    /// 当前插值角度（每 tick 输出）。
     current_angle: f32,
-    /// Desired final angle (set by latest waypoint).
+    /// 目标角度（最新 IK 结果中对应索引的值）。
     target_angle: f32,
 
-    /// Angle at the start of the current transition.
+    /// 当前过渡的起始角度。
     start_angle: f32,
-    /// Clock time when the current transition started.
-    #[reflect(ignore)]
-    transition_start: CuTime,
-    /// Duration of one full transition (nanoseconds).
-    #[reflect(ignore)]
-    transition_dur: CuDuration,
+    /// 当前过渡开始的时刻（秒）。
+    transition_start: f32,
+    /// 一次完整过渡的时长（秒）。
+    transition_dur: f32,
 }
 
 impl Freezable for JointInterpolator {}
@@ -44,45 +40,43 @@ impl CuTask for JointInterpolator {
     where
         Self: Sized,
     {
-        let cfg = config.ok_or_else(|| CuError::from("JointInterpolator requires config"))?;
+        let cfg = config.ok_or_else(|| CuError::from("JointInterpolator 需要 config"))?;
         let joint_index = cfg.get::<u64>("joint_index").ok().flatten().unwrap_or(0) as usize;
         let transition_ms = cfg
             .get::<f64>("transition_ms")
             .ok()
             .flatten()
             .unwrap_or(100.0);
+
         Ok(Self {
             joint_index,
             current_angle: 0.0,
             target_angle: 0.0,
             start_angle: 0.0,
-            transition_start: CuTime(0),
-            transition_dur: CuDuration::from_millis(transition_ms as u64),
+            transition_start: 0.0,
+            transition_dur: transition_ms as f32 / 1000.0,
         })
     }
 
     fn process(
         &mut self,
-        ctx: &CuContext,
+        _ctx: &CuContext,
         input: &Self::Input<'_>,
         output: &mut Self::Output<'_>,
     ) -> CuResult<()> {
-        // Detect a new target angle → start a new timed transition.
         if let Some(wp) = input.payload() {
             let new_target = wp.angles[self.joint_index];
             let changed = (self.target_angle - new_target).abs() > f32::EPSILON;
             if changed {
                 self.start_angle = self.current_angle;
                 self.target_angle = new_target;
-                self.transition_start = ctx.now();
+                self.transition_start = clock::now_secs();
             }
         }
 
-        // Time-based linear interpolation.
-        let elapsed = ctx.now() - self.transition_start;
-        let progress = if self.transition_dur.0 > 0 {
-            let p = elapsed.0 as f64 / self.transition_dur.0 as f64;
-            (p as f32).clamp(0.0, 1.0)
+        let elapsed = clock::now_secs() - self.transition_start;
+        let progress = if self.transition_dur > 0.0 {
+            (elapsed / self.transition_dur).clamp(0.0, 1.0)
         } else {
             1.0
         };

@@ -1,28 +1,27 @@
-//! Trajectory types — map time t → CartesianWaypoint.
+//! 轨迹类型——将时间 t 映射为笛卡尔路径点。
 //!
-//! Pure-math, `no_std` compatible.  Callers sample the trajectory at a
-//! given time *t* (in seconds) to obtain a Cartesian waypoint.
+//! 纯数学运算，不依赖 std。调用方通过 `sample(t)` 在任意时刻
+//! 采样轨迹，得到一个 `CartesianWaypoint`。
 
-use ironarm_core::messages::CartesianWaypoint;
-use std::vec::Vec;
+use crate::messages::CartesianWaypoint;
+use alloc::vec::Vec;
 
 // ---------------------------------------------------------------------------
-// Trajectory type
+// 轨迹枚举
 // ---------------------------------------------------------------------------
 
-/// A trajectory maps time *t* (seconds) to a Cartesian waypoint.
+/// 轨迹：时间 t（秒）→ 笛卡尔路径点。
 #[derive(Debug, Clone)]
 pub enum Trajectory {
-    /// Horizontal circle at height *z*.
+    /// 水平圆（高度 z 固定）。
     Circle {
         cx: f32,
         cy: f32,
         r: f32,
         z: f32,
-        period: f32,
+        period: f32, // 周期（秒）
     },
-    /// Circle in an arbitrary plane (not parallel to any standard plane).
-    /// `nx, ny, nz` is the plane normal (auto-normalised).
+    /// 倾斜圆（由法向量 n 定义的任意平面内的圆）。
     TiltedCircle {
         cx: f32,
         cy: f32,
@@ -33,15 +32,14 @@ pub enum Trajectory {
         r: f32,
         period: f32,
     },
-    /// Linear interpolation from *start* to *end* over *duration* seconds.
+    /// 线性插值（从起点到终点，持续 duration 秒）。
     Linear {
         start: CartesianWaypoint,
         end: CartesianWaypoint,
         duration: f32,
     },
-    /// Multi-waypoint trajectory.  Each entry is `(time_seconds, waypoint)`.
-    /// Linear interpolation between consecutive entries.  If *looped*, wraps
-    /// around; otherwise clamps at the last waypoint.
+    /// 多路径点轨迹。每项为 (时刻, 路径点)，相邻点间线性插值。
+    /// looped = true 时循环，否则在最后一点停止。
     Waypoints {
         points: Vec<(f32, CartesianWaypoint)>,
         looped: bool,
@@ -61,7 +59,7 @@ impl Default for Trajectory {
 }
 
 impl Trajectory {
-    /// Sample the trajectory at time *t* (seconds).
+    /// 在时刻 t 采样轨迹。
     pub fn sample(&self, t: f32) -> CartesianWaypoint {
         match self {
             Self::Circle {
@@ -120,10 +118,10 @@ impl Trajectory {
 }
 
 // ---------------------------------------------------------------------------
-// Convenience constructors
+// 便捷构造函数
 // ---------------------------------------------------------------------------
 
-/// Create a circular trajectory.
+/// 创建水平圆形轨迹。
 pub fn circle(cx: f32, cy: f32, r: f32, z: f32, period: f32) -> Trajectory {
     Trajectory::Circle {
         cx,
@@ -134,7 +132,7 @@ pub fn circle(cx: f32, cy: f32, r: f32, z: f32, period: f32) -> Trajectory {
     }
 }
 
-/// Create a linear trajectory.
+/// 创建线性轨迹。
 pub fn linear(start: CartesianWaypoint, end: CartesianWaypoint, duration: f32) -> Trajectory {
     Trajectory::Linear {
         start,
@@ -143,7 +141,7 @@ pub fn linear(start: CartesianWaypoint, end: CartesianWaypoint, duration: f32) -
     }
 }
 
-/// Create a tilted-circle trajectory (plane defined by normal vector).
+/// 创建倾斜圆轨迹（由法向量定义平面）。
 pub fn tilted_circle(
     cx: f32,
     cy: f32,
@@ -172,18 +170,18 @@ pub fn tilted_circle(
     }
 }
 
-/// Create a waypoint trajectory.
+/// 创建多路径点轨迹。
 pub fn waypoints(points: Vec<(f32, CartesianWaypoint)>, looped: bool) -> Trajectory {
     Trajectory::Waypoints { points, looped }
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
+// 内部辅助函数
 // ---------------------------------------------------------------------------
 
-/// Build two orthogonal unit vectors (u, v) spanning the plane with normal n.
+/// 构建法向量 n 的正交基 (u, v)。
 fn plane_basis(nx: f32, ny: f32, nz: f32) -> ((f32, f32, f32), (f32, f32, f32)) {
-    // Choose a reference vector not parallel to n
+    // 选一个不与 n 平行的参考向量
     let (rx, ry, rz) = if nx.abs() < 0.9 {
         (1.0, 0.0, 0.0)
     } else {
@@ -210,8 +208,8 @@ fn lerp(a: f32, b: f32, t: f32) -> f32 {
     a + (b - a) * t
 }
 
-/// Linear interpolation through a sorted list of `(time, waypoint)` entries.
-/// If *looped*, the trajectory wraps; otherwise it clamps at the last entry.
+/// 在排序的 (时刻, 路径点) 列表中线性插值。
+/// looped = true 时循环，否则在最后一点截断。
 fn sample_waypoints(
     points: &[(f32, CartesianWaypoint)],
     t: f32,
@@ -225,13 +223,12 @@ fn sample_waypoints(
         };
     }
     if points.len() == 1 {
-        return points[0].1.clone();
+        return points[0].1;
     }
 
     let total_duration = points.last().unwrap().0;
 
     let t = if looped && total_duration > 0.0 {
-        // wrap t into [0, total_duration)
         let wrapped = t % total_duration;
         if wrapped < 0.0 {
             wrapped + total_duration
@@ -242,7 +239,6 @@ fn sample_waypoints(
         t.clamp(0.0, total_duration)
     };
 
-    // find the segment [points[i], points[i+1]) that contains t
     for i in 0..points.len().saturating_sub(1) {
         let t0 = points[i].0;
         let t1 = points[i + 1].0;
@@ -256,13 +252,17 @@ fn sample_waypoints(
         }
     }
 
-    // t >= last time or no segment matched — return last waypoint
-    points.last().unwrap().1.clone()
+    points.last().unwrap().1
 }
 
+// ---------------------------------------------------------------------------
+// 单元测试
+// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec;
+
     use super::*;
 
     #[test]
@@ -281,8 +281,16 @@ mod tests {
     #[test]
     fn test_linear() {
         let traj = linear(
-            CartesianWaypoint { x: 0.0, y: 0.0, z: 0.0 },
-            CartesianWaypoint { x: 2.0, y: 4.0, z: 0.0 },
+            CartesianWaypoint {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            CartesianWaypoint {
+                x: 2.0,
+                y: 4.0,
+                z: 0.0,
+            },
             2.0,
         );
         let p = traj.sample(1.0);
@@ -294,9 +302,30 @@ mod tests {
     fn test_waypoints() {
         let traj = waypoints(
             vec![
-                (0.0, CartesianWaypoint { x: 0.0, y: 0.0, z: 0.0 }),
-                (2.0, CartesianWaypoint { x: 2.0, y: 0.0, z: 0.0 }),
-                (4.0, CartesianWaypoint { x: 2.0, y: 2.0, z: 0.0 }),
+                (
+                    0.0,
+                    CartesianWaypoint {
+                        x: 0.0,
+                        y: 0.0,
+                        z: 0.0,
+                    },
+                ),
+                (
+                    2.0,
+                    CartesianWaypoint {
+                        x: 2.0,
+                        y: 0.0,
+                        z: 0.0,
+                    },
+                ),
+                (
+                    4.0,
+                    CartesianWaypoint {
+                        x: 2.0,
+                        y: 2.0,
+                        z: 0.0,
+                    },
+                ),
             ],
             false,
         );
@@ -309,8 +338,22 @@ mod tests {
     fn test_waypoints_looped() {
         let traj = waypoints(
             vec![
-                (0.0, CartesianWaypoint { x: 0.0, y: 0.0, z: 0.0 }),
-                (2.0, CartesianWaypoint { x: 2.0, y: 0.0, z: 0.0 }),
+                (
+                    0.0,
+                    CartesianWaypoint {
+                        x: 0.0,
+                        y: 0.0,
+                        z: 0.0,
+                    },
+                ),
+                (
+                    2.0,
+                    CartesianWaypoint {
+                        x: 2.0,
+                        y: 0.0,
+                        z: 0.0,
+                    },
+                ),
             ],
             true,
         );

@@ -5,7 +5,7 @@ use std::time::Duration;
 
 fn main() {
     let logger_path = std::path::Path::new("target/copper_check.copper");
-    let t = thread::spawn(move || {
+    let _ = thread::spawn(move || {
         ironarm_std::run_tui(logger_path, Some(1024 * 1024 * 10));
     });
 
@@ -16,9 +16,8 @@ fn main() {
     let start = std::time::Instant::now();
 
     while start.elapsed() < Duration::from_secs(3) {
-        if ironarm_std::ringbuf::read().is_some() {
-            c.fetch_add(1, Ordering::Relaxed);
-        }
+        ironarm_std::shared_state::read();
+        c.fetch_add(1, Ordering::Relaxed);
         thread::sleep(Duration::from_millis(1));
     }
 

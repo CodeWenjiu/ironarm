@@ -1,4 +1,4 @@
-use crate::ringbuf::{self, ArmState};
+use crate::shared_state::{self, ArmState};
 use cu29::prelude::*;
 use ironarm_core::messages::{JointState, JointWaypoint};
 
@@ -49,7 +49,7 @@ impl CuSinkTask for StateSink {
         self.last = angles;
 
         let wp = ik.payload();
-        ringbuf::write(ArmState {
+        shared_state::write(ArmState {
             j0: angles[0],
             j1: angles[1],
             j2: angles[2],

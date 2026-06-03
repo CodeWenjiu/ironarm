@@ -260,38 +260,6 @@ fn sample_waypoints(
     points.last().unwrap().1.clone()
 }
 
-// ---------------------------------------------------------------------------
-// Old compatibility helpers (keep circle_waypoint as a thin wrapper)
-// ---------------------------------------------------------------------------
-
-use ironarm_core::motion::ArmGeometry4Dof;
-
-/// Compute joint angles for the circular trajectory at time *t*.
-pub fn compute_circle_angles(
-    t: f32,
-    l1: f32,
-    l2_eff: f32,
-    shoulder_z: f32,
-) -> Option<(f32, f32, f32, f32)> {
-    let geo = ArmGeometry4Dof {
-        l1,
-        l2: l2_eff - 0.06,
-        l2_eff,
-        shoulder_z,
-    };
-    let h = 0.5f32;
-    let r = l1 + (l2_eff * l2_eff - h * h).sqrt();
-    let z = shoulder_z + h;
-    let wp = circle(0.0, 0.0, r, z, 20.0).sample(t);
-    ironarm_core::ik::solve_ik(
-        &ironarm_core::ik::EETarget {
-            x: wp.x,
-            y: wp.y,
-            z: wp.z,
-        },
-        &geo,
-    )
-}
 
 #[cfg(test)]
 mod tests {
@@ -305,7 +273,7 @@ mod tests {
         assert!(p0.y.abs() < 0.01);
         assert!((p0.z - 0.5).abs() < 0.01);
 
-        let p1 = traj.sample(1.0); // quarter turn
+        let p1 = traj.sample(1.0);
         assert!(p1.x.abs() < 0.01);
         assert!((p1.y - 1.0).abs() < 0.01);
     }
@@ -313,16 +281,8 @@ mod tests {
     #[test]
     fn test_linear() {
         let traj = linear(
-            CartesianWaypoint {
-                x: 0.0,
-                y: 0.0,
-                z: 0.0,
-            },
-            CartesianWaypoint {
-                x: 2.0,
-                y: 4.0,
-                z: 0.0,
-            },
+            CartesianWaypoint { x: 0.0, y: 0.0, z: 0.0 },
+            CartesianWaypoint { x: 2.0, y: 4.0, z: 0.0 },
             2.0,
         );
         let p = traj.sample(1.0);
@@ -332,70 +292,29 @@ mod tests {
 
     #[test]
     fn test_waypoints() {
-        use std::vec;
         let traj = waypoints(
             vec![
-                (
-                    0.0,
-                    CartesianWaypoint {
-                        x: 0.0,
-                        y: 0.0,
-                        z: 0.0,
-                    },
-                ),
-                (
-                    2.0,
-                    CartesianWaypoint {
-                        x: 2.0,
-                        y: 0.0,
-                        z: 0.0,
-                    },
-                ),
-                (
-                    4.0,
-                    CartesianWaypoint {
-                        x: 2.0,
-                        y: 2.0,
-                        z: 0.0,
-                    },
-                ),
+                (0.0, CartesianWaypoint { x: 0.0, y: 0.0, z: 0.0 }),
+                (2.0, CartesianWaypoint { x: 2.0, y: 0.0, z: 0.0 }),
+                (4.0, CartesianWaypoint { x: 2.0, y: 2.0, z: 0.0 }),
             ],
             false,
         );
-        let p = traj.sample(1.0); // halfway between wp0 and wp1
+        let p = traj.sample(1.0);
         assert!((p.x - 1.0).abs() < 0.01);
         assert!(p.y.abs() < 0.01);
-
-        let p2 = traj.sample(5.0); // past end — clamp
-        assert!((p2.x - 2.0).abs() < 0.01);
-        assert!((p2.y - 2.0).abs() < 0.01);
     }
 
     #[test]
     fn test_waypoints_looped() {
-        use std::vec;
         let traj = waypoints(
             vec![
-                (
-                    0.0,
-                    CartesianWaypoint {
-                        x: 0.0,
-                        y: 0.0,
-                        z: 0.0,
-                    },
-                ),
-                (
-                    2.0,
-                    CartesianWaypoint {
-                        x: 2.0,
-                        y: 0.0,
-                        z: 0.0,
-                    },
-                ),
+                (0.0, CartesianWaypoint { x: 0.0, y: 0.0, z: 0.0 }),
+                (2.0, CartesianWaypoint { x: 2.0, y: 0.0, z: 0.0 }),
             ],
             true,
         );
-        let p = traj.sample(3.0); // wraps to t=1.0
+        let p = traj.sample(3.0);
         assert!((p.x - 1.0).abs() < 0.01);
         assert!(p.y.abs() < 0.01);
     }

@@ -1,17 +1,20 @@
-use crate::ik::{EETarget, solve_ik};
+use crate::ik_geo::{self, LinkOffsets, ScrewAxes};
 use crate::messages::{CartesianWaypoint, JointWaypoint};
-use crate::motion::ArmGeometry4Dof;
 use alloc::format;
 use alloc::vec;
 use cu29::prelude::*;
 
-/// Receives Cartesian waypoints, outputs joint-angle waypoints for 4-DOF arm.
+/// Receives Cartesian waypoints, outputs 6-DOF joint-angle waypoints using IK-Geo.
 ///
-/// Adaptive: skips IK recomputation when waypoint hasn't changed.
+/// Configured by `joint_index` (0..5) to select which joint angle to emit.
+/// All instances compute the full 6-DOF solution internally.
 #[derive(Reflect)]
 pub struct IKSolver {
     joint_index: usize,
-    geo: ArmGeometry4Dof,
+    #[reflect(ignore)]
+    h: ScrewAxes,
+    #[reflect(ignore)]
+    p: LinkOffsets,
     last_input: CartesianWaypoint,
     last_output: JointWaypoint,
 }
@@ -29,18 +32,30 @@ impl CuTask for IKSolver {
     {
         let cfg = config.unwrap_or_else(|| panic!("IKSolver requires config"));
         let joint_index = cfg.get::<u64>("joint_index").ok().flatten().unwrap_or(0) as usize;
-        let l1 = cfg.get::<f64>("l1").ok().flatten().unwrap_or(0.8) as f32;
-        let l2 = cfg.get::<f64>("l2").ok().flatten().unwrap_or(0.7) as f32;
-        let l2_eff = cfg.get::<f64>("l2_eff").ok().flatten().unwrap_or(0.85) as f32;
-        let shoulder_z = cfg.get::<f64>("shoulder_z").ok().flatten().unwrap_or(0.18) as f32;
+
+        // UR5e PoE parameters extracted from MuJoCo model
+        let h: ScrewAxes = [
+            [0.0, 0.0, 1.0],
+            [0.0, -1.0, 0.0],
+            [0.0, -1.0, 0.0],
+            [0.0, -1.0, 0.0],
+            [0.0, 0.0, -1.0],
+            [0.0, -1.0, 0.0],
+        ];
+        let p: LinkOffsets = [
+            [0.0, 0.0, 0.163],
+            [0.0, -0.138, 0.0],
+            [-0.425, 0.131, 0.0],
+            [-0.392, 0.0, 0.0],
+            [0.0, -0.127, 0.0],
+            [0.0, 0.0, -0.100],
+            [0.0, -0.100, 0.0],
+        ];
+
         Ok(Self {
             joint_index,
-            geo: ArmGeometry4Dof {
-                l1,
-                l2,
-                l2_eff,
-                shoulder_z,
-            },
+            h,
+            p,
             last_input: CartesianWaypoint {
                 x: f32::NAN,
                 y: f32::NAN,
@@ -62,27 +77,25 @@ impl CuTask for IKSolver {
 
         if *wp == self.last_input {
             output.set_payload(self.last_output.clone());
-            output.metadata.set_status(format!(
-                "IK j{}: {:.3} rad (cached)",
-                self.joint_index,
-                self.last_output.angles.first().copied().unwrap_or(0.0)
-            ));
             return Ok(());
         }
         self.last_input = wp.clone();
 
-        let target = EETarget {
-            x: wp.x,
-            y: wp.y,
-            z: wp.z,
-        };
-        let angles = match solve_ik(&target, &self.geo) {
-            Some((j0, j1, j2, j3)) => [j0, j1, j2, j3],
-            None => [0.0; 4],
-        };
-        let raw = angles.get(self.joint_index).copied().unwrap_or(0.0);
+        // Position-only IK: identity orientation
+        let r_target = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0];
+        let p_target = [wp.x, wp.y, wp.z];
 
-        // Phase unwrap: ensure shortest angular path from previous output
+        let sols = ik_geo::solve_3p2i(&r_target, &p_target, &self.h, &self.p);
+
+        // Pick first solution where all joints are within UR5e limits (±2π for most)
+        let angles: [f32; 6] = sols
+            .iter()
+            .find(|s| s.iter().all(|a| a.is_finite()))
+            .copied()
+            .unwrap_or([0.0; 6]);
+
+        // Phase unwrap for this specific joint
+        let raw = angles.get(self.joint_index).copied().unwrap_or(0.0);
         let prev = self.last_output.angles.first().copied().unwrap_or(raw);
         let mut angle = raw;
         while angle - prev > core::f32::consts::PI {

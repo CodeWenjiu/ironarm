@@ -41,12 +41,12 @@
 
 1. **先查文档再动手。** 不熟悉的工具/语法（如 justfile `[group]`、bevy API）必须先 query-docs 或读 reference 确认，禁止凭「印象」或「推测」写代码。
 2. **write_file 不可靠，用 `cat << 'EOF'` 替代。** `write_file` 工具写入的文件可能出现编码问题（如 BOM、不可见字符）导致解析失败。写配置文件（justfile、Cargo.toml、RON 等）一律用终端 heredoc。
-3. **最小化验证，不一次改全文件。** 先写最小可运行 case（单 recipe、单 struct、单 module），验证通过后再扩展到完整版本。不要反复猜错、改全文件、再看报错。
+3. **最小化验证，不一次改全文件。** 先写最小可运行 case，验证通过后再扩展。不要反复猜错、改全文件、再看报错。
 4. **认真读完约束再执行。** 文档说了 `[group]` 只作用于下一个 recipe、中间不能有注释，就必须严格遵守，不是「好像可以」「试试看」。
 5. **验证即交付。** 写完配置必须 `just --list` / `cargo check` 跑通再汇报结果，不允许「应该可以了」就交差。
-6. **所有终端命令必须在 nix-shell 中运行。** 本项目通过 `flake.nix` 管理开发环境（工具链、X11 库、GPU 驱动等）。直接在当前 shell 运行 `cargo` 或程序二进制可能出现缺少依赖的错误。运行命令时使用 `nix develop` 或确保已在 nix-shell 中。
-7. **改完必须自测再汇报。** 每次代码修改完成后，至少运行 `cargo check`（Rust 侧）/ `uv run ruff check . && uv run mypy .`（Python 侧）以及 Python 导入测试，验证无编译错误和类型错误。涉及 GUI / Qt / OpenGL 的改动还需在无头环境下跑最小初始化测试确认不会 crash。不允许「应该可以了」就交差，必须贴出测试通过的输出。
-
-8. **justfile 内不得调用 nix。** 项目使用 nix 管理依赖，但应当是可选的——满足环境依赖的开发者不使用 nix 也应能正常运行。justfile recipe 中禁止出现 \、\、\ 等 nix 命令。如果需要 nix 环境，应由调用方通过 \ 提供，而非在被调用方内部绑定。
-
-8. **justfile 内不得调用 nix。** 项目使用 nix 管理依赖，但应当是可选的——满足环境依赖的开发者不使用 nix 也应能正常运行。justfile recipe 中禁止出现任何 nix 命令。如果需要 nix 环境，应由调用方通过 "nix develop --command just ..." 提供，而非在被调用方内部绑定。
+6. **所有终端命令必须在 nix-shell 中运行。** 本项目通过 `flake.nix` 管理开发环境。运行命令时使用 `nix develop` 或确保已在 nix-shell 中。
+7. **改完必须自测再汇报。** 每次代码修改完成后，至少运行 `cargo check` + `cargo test`（Rust 侧）验证无编译错误。涉及 GUI / Qt / OpenGL 的改动还需跑 `nix develop --command timeout 5 just run sim` 确认不会 crash。不允许「应该可以了」就交差，必须贴出测试通过的输出。
+8. **justfile 内不得调用 nix。** 项目使用 nix 管理依赖，但应当是可选的。justfile recipe 中禁止出现任何 nix 命令。如果需要 nix 环境，应由调用方通过 `nix develop --command just ...` 提供，而非在被调用方内部绑定。
+9. **GUI/渲染改动必须 headless 闭环。** 涉及 QOpenGLWidget、MuJoCo 渲染、Python view 层的任何改动，必须通过 `nix develop --command timeout 5 just run sim` 验证能启动且不崩溃（exit code 124=timeout 正常， exit code 1=崩溃）。视觉正确性无法在 headless 验证的，将关键数据写入 `/tmp/ironarm_diag.txt`，用 `grep` 检查数据是否符合预期。禁止依赖用户观察来验证渲染结果。
+10. **调试失败上限。** 同一个子问题的修改连续失败 3 次后，必须停止猜测。转而：a) 查文档/源码找到正确方式，或 b) 向用户报告根因和已知事实，询问方向。禁止第四、第五次盲试。
+11. **用户不是测试工具。** 禁止以「跑一下看看效果」为主要验证手段。每次修改后必须先通过 `cargo check` + `cargo test` +（GUI 改动）`timeout 5 just run sim` 自测，确认无误后再汇报结果。

@@ -7,7 +7,7 @@ use std::cell::UnsafeCell;
 use std::mem::MaybeUninit;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-/// Data shared between copper and Python (28 bytes).
+/// Data shared between copper and Python (44 bytes).
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub struct ArmState {
@@ -15,6 +15,8 @@ pub struct ArmState {
     pub j1: f32,
     pub j2: f32,
     pub j3: f32,
+    pub j4: f32,
+    pub j5: f32,
     pub wx: f32,
     pub wy: f32,
     pub wz: f32,

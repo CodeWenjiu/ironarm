@@ -75,6 +75,11 @@
 
           shellHook = ''
             mkdir -p .direnv/bin
+            # WSL: use Direct3D12 GPU backend instead of llvmpipe software rendering
+            if [ -d /usr/lib/wsl/lib ]; then
+              export GALLIUM_DRIVER=d3d12
+              export D3D12_FORCE_WARP=0
+            fi
             export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath guiRuntime}:$LD_LIBRARY_PATH
             export PKG_CONFIG_PATH=${pkgs.openssl.dev}/lib/pkgconfig
           ''

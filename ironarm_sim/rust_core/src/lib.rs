@@ -1,4 +1,9 @@
-//! PyO3 bindings: expose ironarm_core algorithms and copper runtime to Python.
+//! PyO3 绑定——将 ironarm_core 算法和 Copper 运行时暴露给 Python。
+//!
+//! 架构：
+//! - `start_copper()` — 在独立线程中启动 Copper DAG
+//! - `poll_state()`  — 从共享内存读取最新关节状态
+//! - `is_copper_alive()` / `join_copper()` — 生命周期管理
 
 use pyo3::prelude::*;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -6,6 +11,7 @@ use std::sync::{Mutex, Once};
 use std::thread::JoinHandle;
 use std::time::Duration;
 
+/// 确保 Copper 运行时只启动一次。
 static COPPER_STARTED: Once = Once::new();
 static COPPER_HANDLE: Mutex<Option<JoinHandle<()>>> = Mutex::new(None);
 static COPPER_RUNNING: AtomicBool = AtomicBool::new(false);
@@ -22,16 +28,19 @@ fn ensure_copper() {
     });
 }
 
+/// 启动 Copper 运行时（独立线程，非阻塞）。
 #[pyo3::pyfunction]
 fn start_copper() {
     ensure_copper();
 }
 
+/// 检查 Copper 是否仍在运行。
 #[pyo3::pyfunction]
 fn is_copper_alive() -> bool {
     COPPER_RUNNING.load(Ordering::SeqCst)
 }
 
+/// 等待 Copper 线程结束（带超时）。
 #[pyo3::pyfunction]
 fn join_copper(timeout_secs: f64) -> bool {
     let mut guard = COPPER_HANDLE.lock().unwrap();
@@ -54,12 +63,14 @@ fn join_copper(timeout_secs: f64) -> bool {
     true
 }
 
+/// 从共享内存读取最新关节状态和路径点。
 #[pyo3::pyfunction]
 fn poll_state() -> (f32, f32, f32, f32, f32, f32, f32, f32, f32) {
     let s = ironarm_std::shared_state::read();
     (s.j0, s.j1, s.j2, s.j3, s.j4, s.j5, s.wx, s.wy, s.wz)
 }
 
+/// Python 模块入口。
 #[pyo3::pymodule]
 fn ironarm_sim(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(pyo3::wrap_pyfunction!(start_copper, m)?)?;

@@ -5,7 +5,7 @@ use cu29::prelude::*;
 ///
 /// 当前为纯软件仿真模式，直接将指令作为当前状态透传。
 /// 后续接真实硬件时在此处对接电机驱动协议。
-#[derive(Reflect)]
+#[cfg_attr(feature = "std", derive(cu29_traits::Reflect))]
 pub struct JointDriver {
     pub joint_index: u64,
 }

@@ -12,11 +12,11 @@
 //! - `ik_geo/solver.rs`   — solve_3p2i 主求解器
 
 mod fk;
-mod mat;
+pub(crate) mod mat;
 mod solver;
 mod subprobs;
 mod types;
-mod vec;
+pub(crate) mod vec;
 
 pub use fk::fk;
 pub use solver::solve_3p2i;

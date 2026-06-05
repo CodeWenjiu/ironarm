@@ -12,7 +12,7 @@ use crate::messages::{JointCommand, JointWaypoint};
 use alloc::format;
 use cu29::prelude::*;
 
-#[derive(Reflect)]
+#[cfg_attr(feature = "std", derive(cu29_traits::Reflect))]
 pub struct JointInterpolator {
     joint_index: usize,
 
@@ -24,8 +24,10 @@ pub struct JointInterpolator {
     /// 当前过渡的起始角度。
     start_angle: f32,
     /// 当前过渡开始的时刻（秒）。
+    #[cfg_attr(feature = "std", reflect(ignore))]
     transition_start: f32,
     /// 一次完整过渡的时长（秒）。
+    #[cfg_attr(feature = "std", reflect(ignore))]
     transition_dur: f32,
 }
 

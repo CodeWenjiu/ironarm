@@ -10,12 +10,12 @@ name = "ironarm_core"
 path = "src/lib.rs"
 
 [features]
-default = ["std"]
-std = ["dep:cu29", "dep:cu29-traits", "dep:bevy_reflect"]
+default = []
+std = ["cu29/reflect", "dep:cu29-traits", "dep:bevy_reflect"]
 
 [dependencies]
 ironarm_model = { path = "../ironarm_model" }
-cu29 = { workspace = true, optional = true }
+cu29 = { git = "https://github.com/copper-project/copper-rs.git", branch = "master", default-features = false }
 cu29-traits = { workspace = true, optional = true }
 bevy_reflect = { version = "0.18", optional = true }
 bincode = { workspace = true }

@@ -10,7 +10,9 @@ name = "ironarm_std"
 path = "src/lib.rs"
 
 [dependencies]
-ironarm_core = { path = "../ironarm_core" }
-cu29 = { workspace = true }
+ironarm_core = { path = "../ironarm_core", features = ["std"] }
+cu29 = { workspace = true, features = ["sysclock-perf", "reflect"] }
 cu-consolemon = { workspace = true }
 triple_buffer = "7"
+rhai = { version = "1", features = ["sync"] }
+log = "0.4"

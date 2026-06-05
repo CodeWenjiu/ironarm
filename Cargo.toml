@@ -10,7 +10,7 @@ opt-level = 1
 opt-level = 3
 
 [workspace.dependencies]
-cu29 = { git = "https://github.com/copper-project/copper-rs.git", branch = "master", features = ["sysclock-perf", "reflect"] }
+cu29 = { git = "https://github.com/copper-project/copper-rs.git", branch = "master" }
 cu29-traits = { git = "https://github.com/copper-project/copper-rs.git", branch = "master", features = ["reflect"] }
 cu-consolemon = { git = "https://github.com/copper-project/copper-rs.git", branch = "master" }
 cu29-export = { git = "https://github.com/copper-project/copper-rs.git", branch = "master" }

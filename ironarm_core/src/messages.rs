@@ -26,13 +26,16 @@ pub struct JointState {
 // 流水线消息（运动规划 → IK → 插值 → 关节）
 // ---------------------------------------------------------------------------
 
-/// 运动规划器 → IK 求解器：笛卡尔空间中的目标点。
-#[derive(Debug, Clone, Copy, PartialEq, Encode, Decode, Serialize, Deserialize)]
-#[cfg_attr(feature = "std", derive(Default, cu29_traits::Reflect))]
+/// 运动规划器 → IK 求解器：笛卡尔空间中的目标点和姿态。
+#[derive(Debug, Clone, Copy, PartialEq, Default, Encode, Decode, Serialize, Deserialize)]
+#[cfg_attr(feature = "std", derive(cu29_traits::Reflect))]
 pub struct CartesianWaypoint {
     pub x: f32,
     pub y: f32,
-    pub z: f32,
+    pub z: f32, // 位置
+    pub rx: f32,
+    pub ry: f32,
+    pub rz: f32, // 姿态（XYZ 欧拉角，弧度）
 }
 
 /// IK 求解器 → 插值器 / 状态收集器。
@@ -53,6 +56,9 @@ impl Default for JointWaypoint {
                 x: 0.0,
                 y: 0.0,
                 z: 0.0,
+                rx: 0.0,
+                ry: 0.0,
+                rz: 0.0,
             },
             angles: [0.0; ironarm_model::N_JOINTS],
         }

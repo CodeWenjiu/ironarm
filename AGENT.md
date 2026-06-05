@@ -2,6 +2,14 @@
 
 > Tier 3 Local Law — 本项目所有 agent 会话自动加载。与用户指令冲突时，用户指令优先。
 
+## 零、每次行动前必须自检（违反任一条 = 立即停止并纠正）
+
+- **终端命令？** → 必须用 `nix develop --command` 包裹（详见六.6）。
+- **用户报告了问题？** → 必须先精确复现用户描述的命令和场景（详见六.12）。
+- **要汇报结论？** → 必须贴出 `cargo test` 或 `headless_render.py` 的通过输出（详见六.7）。
+
+---
+
 ## 一、项目性质
 
 基于 Copper（cu29）框架的机械臂控制项目。最终目标是工业级机械臂的运动控制、离线回放和物理仿真。
@@ -37,16 +45,30 @@
 - `cu29` 及 `cu-*` 系列统一从 crates.io 拉取最新 stable release，不使用 git 依赖
 - 外部 crate 版本号与 `copper-project/extra-examples` master 分支保持一致
 
-## 六、Agent 行为规范（给自己的约束）
+## 六、Agent 行为规范
 
 1. **先查文档再动手。** 不熟悉的工具/语法（如 justfile `[group]`、bevy API）必须先 query-docs 或读 reference 确认，禁止凭「印象」或「推测」写代码。
-2. **write_file 不可靠，用 `cat << 'EOF'` 替代。** `write_file` 工具写入的文件可能出现编码问题（如 BOM、不可见字符）导致解析失败。写配置文件（justfile、Cargo.toml、RON 等）一律用终端 heredoc。
-3. **最小化验证，不一次改全文件。** 先写最小可运行 case，验证通过后再扩展。不要反复猜错、改全文件、再看报错。
-4. **认真读完约束再执行。** 文档说了 `[group]` 只作用于下一个 recipe、中间不能有注释，就必须严格遵守，不是「好像可以」「试试看」。
-5. **验证即交付。** 写完配置必须 `just --list` / `cargo check` 跑通再汇报结果，不允许「应该可以了」就交差。
-6. **所有终端命令必须在 nix-shell 中运行。** 本项目通过 `flake.nix` 管理开发环境。运行命令时使用 `nix develop` 或确保已在 nix-shell 中。
-7. **改完必须自测再汇报。** 每次代码修改完成后，至少运行 `cargo check` + `cargo test`（Rust 侧）验证无编译错误。涉及 GUI / Qt / OpenGL 的改动还需跑 `nix develop --command timeout 5 just run sim` 确认不会 crash。不允许「应该可以了」就交差，必须贴出测试通过的输出。
-8. **justfile 内不得调用 nix。** 项目使用 nix 管理依赖，但应当是可选的。justfile recipe 中禁止出现任何 nix 命令。如果需要 nix 环境，应由调用方通过 `nix develop --command just ...` 提供，而非在被调用方内部绑定。
-9. **GUI/渲染改动必须 headless 闭环。** 涉及 QOpenGLWidget、MuJoCo 渲染、Python view 层的任何改动，必须通过 `nix develop --command timeout 5 just run sim` 验证能启动且不崩溃（exit code 124=timeout 正常， exit code 1=崩溃）。视觉正确性无法在 headless 验证的，将关键数据写入 `/tmp/ironarm_diag.txt`，用 `grep` 检查数据是否符合预期。禁止依赖用户观察来验证渲染结果。
-10. **调试失败上限。** 同一个子问题的修改连续失败 3 次后，必须停止猜测。转而：a) 查文档/源码找到正确方式，或 b) 向用户报告根因和已知事实，询问方向。禁止第四、第五次盲试。
-11. **用户不是测试工具。** 禁止以「跑一下看看效果」为主要验证手段。每次修改后必须先通过 `cargo check` + `cargo test` +（GUI 改动）`timeout 5 just run sim` 自测，确认无误后再汇报结果。
+2. **最小化验证，不一次改全文件。** 先写最小可运行 case，验证通过后再扩展。
+3. **认真读完约束再执行。** 文档说了 `[group]` 只作用于下一个 recipe，就必须严格遵守，不是「好像可以」「试试看」。
+4. **所有终端命令必须在 nix-shell 中运行。** 本项目通过 `flake.nix` 管理开发环境。运行命令时使用 `nix develop --command` 包裹，或确保已在 nix-shell 中。
+5. **改完必须自测再汇报。** 每次代码修改完成后必须跑 `cargo check` + `cargo test`。涉及 Sim / GUI 的改动还需跑 `nix develop --command timeout 5 just run sim`（exit code 124=正常 timeout，1=崩溃）+ `headless_render.py`（误差 <50mm）。必须贴出通过输出，禁止「应该没问题」。
+6. **justfile 内不得调用 nix。** justfile recipe 中禁止出现任何 nix 命令。需要 nix 环境由调用方通过 `nix develop --command just ...` 提供。
+7. **GUI/渲染改动必须 headless 闭环。** 涉及 MuJoCo 渲染、Python view 层的改动，必须通过 `nix develop --command timeout 5 just run sim` 验证不崩溃。视觉正确性无法 headless 验证的，将关键数据写入 `/tmp/ironarm_diag.txt`，用 `grep` 检查。禁止依赖用户观察来验证渲染结果。
+8. **调试失败上限。** 同一子问题连续失败 3 次后，必须停止猜测。转而：a) 查文档/源码找到正确方式，或 b) 向用户报告根因和已知事实，询问方向。禁止第四、第五次盲试。
+9. **精确复现优先于猜测。** 用户报告"命令 X 不行，命令 Y 可以"时，必须先直接跑 X 和 Y 各一次，对比输出差异，定位到具体代码/配置行。禁止用替代路径绕过。用户没有骗你。
+10. **先写复现测试再修 bug。** 定位到 bug 根因后，先写最小单元测试复现该 bug（跑一遍确认 FAIL），再修改产品代码，最后确认测试 PASS。Rust 侧写 `#[test]`，Python 侧用 `headless_render.py` 闭环。
+
+## 七、Sim / PyO3 专项约束
+
+1. **`copperconfig.ron` 的位置。** `#[copper_runtime(config = "copperconfig.ron")]` 的路径在编译期相对于 **应用该宏的 crate 的 CARGO_MANIFEST_DIR**（当前为 `ironarm_std/`）解析，而非运行时 CWD。不允许在其他位置放同名文件——那不会被读取，只会制造混淆。
+2. **`uv run` 的 sync 陷阱。** `uv run python` 在运行前会自动检查环境是否和 `uv.lock` 一致，不一致就 sync——这会覆盖 `maturin develop` 刚编译好的 `.so`。justfile 中运行 Python 必须用 `uv run --no-sync python`。
+3. **`maturin develop` 的脏缓存。** 改完 Rust 代码后，`maturin develop` 可能不覆盖 `.venv` 中旧 `.so`。justfile 的 `run` recipe 必须在 `maturin develop` 前执行 `rm -rf .venv/lib/python*/site-packages/ironarm_sim*`。
+4. **PyO3 panic 变异常。** Rust 侧的 `panic!()` 在 PyO3 函数中会被转换为 `pyo3_runtime.PanicException`，不会让 Python 进程 crash。不能通过「进程是否崩溃」来判断 Rust 代码是否执行到。验证执行路径请用文件写入（`std::fs::write`）或 `headless_render.py`。
+5. **Sim 和 TUI 必须分开验证。** 两者共用 `ironarm_std`，但入口不同（`ironarm_sim/rust_core/src/lib.rs` vs `ironarm_tui/src/main.rs`），线程模型不同（Sim 在独立线程跑 Copper）。问题可能只在一边出现，必须两边都测。
+
+## 八、Rhai 专项约束
+
+1. **类型转换用 `as_float()` 不用 `try_cast::<f32>()`。** Rhai 内部数值为 `f64`，`Dynamic::try_cast::<T>()` 做的是精确类型匹配（`Any::downcast_ref`），不做窄化转换。提取数值必须用 `v.as_float().ok().map(|f| f as f32)`。
+2. **`import` 的模块会被 Engine 缓存。** `Engine::compile()` 会缓存已 import 的模块 AST，修改模块文件后重编译主脚本不会重新读取模块。热重载必须 `Engine::new()` 创建新实例来清空缓存。
+3. **`const` 在导入模块中不可见。** 模块顶层 `const` 在 `import` 后，被调用函数内无法访问。改用函数内 `let`。`PI` 同理——直接写 `3.141592653589793` 字面量。
+4. **Rhai 数值字面量默认为 `f64`。** 从 Rust 传参数进 Rhai 函数时，传 `f64` 避免 `f32 * f64` 类型不匹配。

@@ -44,6 +44,7 @@ class Arm3DView(QOpenGLWidget):
         # 轨迹记录
         self._trail: collections.deque = collections.deque(maxlen=TRAIL_LEN)
         self._tgt_pos: np.ndarray = np.zeros(3)
+        self._last_mouse = None
 
         # 定时器：拉取 Copper 状态
         self._poll_timer = QTimer(self)

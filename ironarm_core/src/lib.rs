@@ -3,10 +3,10 @@
 extern crate alloc;
 
 pub mod clock;
+pub mod collision;
+pub mod interpolation;
 pub mod messages;
-pub mod trajectory;
 
 pub mod ik_geo;
 
-#[cfg(feature = "std")]
 pub mod tasks;

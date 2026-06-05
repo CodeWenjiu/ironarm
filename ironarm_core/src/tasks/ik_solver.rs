@@ -1,6 +1,8 @@
 use core::f32::consts::PI;
 use cu29::prelude::*;
 
+use crate::collision::CollisionConfig;
+use crate::ik_geo::mat::rot;
 use crate::ik_geo::{self, LinkOffsets, ScrewAxes};
 use crate::messages::{CartesianWaypoint, JointWaypoint};
 
@@ -26,6 +28,9 @@ impl IkCache {
                 x: f32::NAN,
                 y: f32::NAN,
                 z: f32::NAN,
+                rx: 0.0,
+                ry: 0.0,
+                rz: 0.0,
             },
             last_output: JointWaypoint::default(),
         }
@@ -59,8 +64,13 @@ impl IkCache {
     }
 }
 
-/// 纯位置 IK 时使用的单位旋转矩阵（不关心末端姿态）。
-const ID_ROT: [f32; 9] = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0];
+/// 从 XYZ 欧拉角构建旋转矩阵（Rz*Ry*Rx，列主序）。
+fn euler_xyz(rx: f32, ry: f32, rz: f32) -> [f32; 9] {
+    let rx_m = rot(&[1.0, 0.0, 0.0], rx);
+    let ry_m = rot(&[0.0, 1.0, 0.0], ry);
+    let rz_m = rot(&[0.0, 0.0, 1.0], rz);
+    crate::ik_geo::mat::mat_mul(&crate::ik_geo::mat::mat_mul(&rz_m, &ry_m), &rx_m)
+}
 
 // ---------------------------------------------------------------------------
 // IKSolver — Copper 任务
@@ -72,16 +82,15 @@ const ID_ROT: [f32; 9] = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0];
 /// 各 JointInterpolator 实例，各自按 joint_index 取自己的关节角。
 ///
 /// 关节数量由 ironarm_model 在编译期从 XML 自动确定。
-#[derive(Reflect)]
+#[cfg_attr(feature = "std", derive(cu29_traits::Reflect))]
 pub struct IKSolver {
-    /// 关节螺旋轴（编译期从 ur5e.xml 生成）。
-    #[reflect(ignore)]
+    #[cfg_attr(feature = "std", reflect(ignore))]
     h: ScrewAxes,
-    /// 连杆偏移（同上）。
-    #[reflect(ignore)]
+    #[cfg_attr(feature = "std", reflect(ignore))]
     p: LinkOffsets,
-    /// 本地缓存（去重 + 相位解绕）。
-    #[reflect(ignore)]
+    #[cfg_attr(feature = "std", reflect(ignore))]
+    collision: CollisionConfig,
+    #[cfg_attr(feature = "std", reflect(ignore))]
     cache: IkCache,
 }
 
@@ -96,11 +105,10 @@ impl CuTask for IKSolver {
     where
         Self: Sized,
     {
-        let _cfg = config;
-
         Ok(Self {
             h: ironarm_model::SCREW_AXES,
             p: ironarm_model::LINK_OFFSETS,
+            collision: CollisionConfig::from_config(config),
             cache: IkCache::new(),
         })
     }
@@ -121,13 +129,12 @@ impl CuTask for IKSolver {
             return Ok(());
         }
 
+        let r_target = euler_xyz(wp.rx, wp.ry, wp.rz);
         let p_target = [wp.x, wp.y, wp.z];
-        let sols = ik_geo::solve_3p2i(&ID_ROT, &p_target, &self.h, &self.p);
-        let mut raw: [f32; ironarm_model::N_JOINTS] = sols
-            .iter()
-            .find(|s| s.iter().all(|a| a.is_finite()))
-            .copied()
-            .unwrap_or([0.0; ironarm_model::N_JOINTS]);
+        let sols = ik_geo::solve_3p2i(&r_target, &p_target, &self.h, &self.p);
+
+        // 碰撞过滤：选无碰撞且离障碍物最远的解
+        let mut raw = self.collision.pick(&self.h, &self.p, &sols);
 
         self.cache.update(wp, &mut raw);
         output.set_payload(self.cache.last_output.clone());

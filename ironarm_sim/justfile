@@ -2,7 +2,8 @@
 
 [group('run')]
 run:
-    @uv run maturin develop
+    @rm -rf .venv/lib/python*/site-packages/ironarm_sim*
+    @uv run maturin develop --release
     @uv run --no-sync python -m src.main
 
 [group('check')]

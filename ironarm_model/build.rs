@@ -306,23 +306,29 @@ fn main() {
     code.push_str("];\n\n");
 
     // Screw axes
-    code.push_str(&format!("pub const SCREW_AXES: [[f32; 3]; {n}] = [\n"));
+    code.push_str(&format!("pub const SCREW_AXES: [glam::Vec3; {n}] = [\n"));
     for a in &h {
-        code.push_str(&format!("    [{:.6}, {:.6}, {:.6}],\n", a[0], a[1], a[2]));
+        code.push_str(&format!(
+            "    glam::Vec3::new({:.6}, {:.6}, {:.6}),\n",
+            a[0], a[1], a[2]
+        ));
     }
     code.push_str("];\n\n");
 
     // Link offsets (joint-to-joint)
     code.push_str(&format!(
-        "pub const LINK_OFFSETS: [[f32; 3]; {}] = [\n",
+        "pub const LINK_OFFSETS: [glam::Vec3; {}] = [\n",
         n + 1
     ));
     for o in &p {
-        code.push_str(&format!("    [{:.6}, {:.6}, {:.6}],\n", o[0], o[1], o[2]));
+        code.push_str(&format!(
+            "    glam::Vec3::new({:.6}, {:.6}, {:.6}),\n",
+            o[0], o[1], o[2]
+        ));
     }
     // Tool offset
     code.push_str(&format!(
-        "    [{:.6}, {:.6}, {:.6}],\n",
+        "    glam::Vec3::new({:.6}, {:.6}, {:.6}),\n",
         p_tool[0], p_tool[1], p_tool[2]
     ));
     code.push_str("];\n");

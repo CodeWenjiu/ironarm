@@ -3,9 +3,8 @@
 use alloc::format;
 use alloc::vec::Vec;
 use cu29::prelude::ComponentConfig;
+use glam::{Mat3, Vec3};
 
-use crate::ik_geo::mat::{mat_mul, mat_mul_vec, rot};
-use crate::ik_geo::vec::add;
 use crate::ik_geo::{LinkOffsets, ScrewAxes};
 
 // ---------------------------------------------------------------------------
@@ -14,14 +13,14 @@ use crate::ik_geo::{LinkOffsets, ScrewAxes};
 
 pub type ObstacleSphere = [f32; 4];
 
-pub fn joint_positions(h: &ScrewAxes, p: &LinkOffsets, q: &[f32; 6]) -> [[f32; 3]; 7] {
-    let mut pts = [[0.0f32; 3]; 7];
-    let mut r = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0];
+pub fn joint_positions(h: &ScrewAxes, p: &LinkOffsets, q: &[f32; 6]) -> [Vec3; 7] {
+    let mut pts = [Vec3::ZERO; 7];
+    let mut r = Mat3::IDENTITY;
     let mut pos = p[0];
     pts[0] = pos;
     for i in 0..6 {
-        r = mat_mul(&r, &rot(&h[i], q[i]));
-        pos = add(&pos, &mat_mul_vec(&r, &p[i + 1]));
+        r = r * Mat3::from_axis_angle(h[i], q[i]);
+        pos += r * p[i + 1];
         pts[i + 1] = pos;
     }
     pts
@@ -37,11 +36,9 @@ pub fn is_collision_free(
     let pts = joint_positions(h, p, q);
     for obs in obstacles {
         let r2 = (obs[3] + margin) * (obs[3] + margin);
+        let obs_pos = Vec3::new(obs[0], obs[1], obs[2]);
         for pt in &pts {
-            let dx = pt[0] - obs[0];
-            let dy = pt[1] - obs[1];
-            let dz = pt[2] - obs[2];
-            if dx * dx + dy * dy + dz * dz < r2 {
+            if (*pt - obs_pos).length_squared() < r2 {
                 return false;
             }
         }
@@ -70,11 +67,9 @@ pub fn pick_safest(
             let pts = joint_positions(h, p, q);
             let mut min_d2 = f32::MAX;
             for obs in obstacles {
+                let obs_pos = Vec3::new(obs[0], obs[1], obs[2]);
                 for pt in &pts {
-                    let dx = pt[0] - obs[0];
-                    let dy = pt[1] - obs[1];
-                    let dz = pt[2] - obs[2];
-                    min_d2 = min_d2.min(dx * dx + dy * dy + dz * dz);
+                    min_d2 = min_d2.min((*pt - obs_pos).length_squared());
                 }
             }
             if min_d2 > best_dist {
@@ -157,7 +152,7 @@ mod tests {
         let h = ironarm_model::SCREW_AXES;
         let p = ironarm_model::LINK_OFFSETS;
         let ground: [ObstacleSphere; 1] = [[0.0, 0.0, -10.0, 10.0]];
-        let r_target = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0];
+        let r_target = Mat3::IDENTITY;
         let mut violations = 0;
         let mut total = 0;
         for i in 0..20 {
@@ -173,16 +168,16 @@ mod tests {
             );
             let um = f32::hypot(f32::hypot(ru.0, ru.1), ru.2);
             let un = (ru.0 / um, ru.1 / um, ru.2 / um);
-            let pt = [
+            let pt = Vec3::new(
                 -0.4 + 0.12 * (phase.cos() * un.0 + phase.sin() * v.0),
                 0.12 * (phase.cos() * un.1 + phase.sin() * v.1),
                 0.35 + 0.12 * (phase.cos() * un.2 + phase.sin() * v.2),
-            ];
+            );
             let sols = crate::ik_geo::solve_3p2i(&r_target, &pt, &h, &p);
             let q = pick_safest(&h, &p, &sols, &ground, 0.05);
             let pts = joint_positions(&h, &p, &q);
             total += 1;
-            if pts.iter().map(|p| p[2]).fold(f32::MAX, f32::min) < 0.0 {
+            if pts.iter().any(|p| p.z < 0.0) {
                 violations += 1;
             }
         }

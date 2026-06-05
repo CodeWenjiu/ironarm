@@ -10,3 +10,6 @@ path = "src/lib.rs"
 
 [build-dependencies]
 roxmltree = "0.20"
+
+[dependencies]
+glam = { version = "0.29", default-features = false, features = ["libm"] }

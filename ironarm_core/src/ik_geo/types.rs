@@ -1,8 +1,7 @@
-//! 运动学类型定义。
+//! 运动学类型定义（基于 glam）。
 
 /// 关节螺旋轴（零位形下基坐标系中的单位向量）。
-pub type ScrewAxes = [[f32; 3]; 6];
+pub type ScrewAxes = [glam::Vec3; 6];
 
-/// 连杆偏移：p[i] = 关节 i 到关节 i+1 的向量（p[6] = 关节 6 到工具）。
-/// p[0] = 基座 → 关节 1, p[1] = 关节 1 → 2, ..., p[6] = 关节 6 → 工具法兰。
-pub type LinkOffsets = [[f32; 3]; 7];
+/// 连杆偏移：p[i] = 关节 i 到关节 i+1 的向量（p[6] = 关节 6 → 工具法兰）。
+pub type LinkOffsets = [glam::Vec3; 7];

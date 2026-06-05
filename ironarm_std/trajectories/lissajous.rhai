@@ -14,8 +14,8 @@ fn sample(t) {
         x: CX + A * sin(w),
         y: CY + B * sin(2.0 * w) * 0.5,
         z: CZ + C * cos(0.5 * w),
-        rx: 0.0,
-        ry: 0.0,
-        rz: 0.0,
+        rx: -10.0,
+        ry: -10.0,
+        rz: -10.0,
     }
 }

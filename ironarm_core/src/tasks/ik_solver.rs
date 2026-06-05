@@ -1,8 +1,8 @@
 use core::f32::consts::PI;
 use cu29::prelude::*;
+use glam::{Mat3, Vec3};
 
 use crate::collision::CollisionConfig;
-use crate::ik_geo::mat::rot;
 use crate::ik_geo::{self, LinkOffsets, ScrewAxes};
 use crate::messages::{CartesianWaypoint, JointWaypoint};
 
@@ -64,12 +64,9 @@ impl IkCache {
     }
 }
 
-/// 从 XYZ 欧拉角构建旋转矩阵（Rz*Ry*Rx，列主序）。
-fn euler_xyz(rx: f32, ry: f32, rz: f32) -> [f32; 9] {
-    let rx_m = rot(&[1.0, 0.0, 0.0], rx);
-    let ry_m = rot(&[0.0, 1.0, 0.0], ry);
-    let rz_m = rot(&[0.0, 0.0, 1.0], rz);
-    crate::ik_geo::mat::mat_mul(&crate::ik_geo::mat::mat_mul(&rz_m, &ry_m), &rx_m)
+/// 从 XYZ 欧拉角构建旋转矩阵（Rz*Ry*Rx）。
+fn euler_xyz(rx: f32, ry: f32, rz: f32) -> Mat3 {
+    Mat3::from_rotation_z(rz) * Mat3::from_rotation_y(ry) * Mat3::from_rotation_x(rx)
 }
 
 // ---------------------------------------------------------------------------
@@ -130,7 +127,7 @@ impl CuTask for IKSolver {
         }
 
         let r_target = euler_xyz(wp.rx, wp.ry, wp.rz);
-        let p_target = [wp.x, wp.y, wp.z];
+        let p_target = Vec3::new(wp.x, wp.y, wp.z);
         let sols = ik_geo::solve_3p2i(&r_target, &p_target, &self.h, &self.p);
 
         // 碰撞过滤：选无碰撞且离障碍物最远的解
